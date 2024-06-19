@@ -48,7 +48,18 @@ find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(arena_sdk REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 
+
+
+# ------------
+#
+# ------------
+rosidl_generate_interfaces(${PROJECT_NAME}
+    msg/CameraSettings.msg
+ )
+
+ament_export_dependencies(rosidl_default_runtime)
 # ------------
 # EXPORT DEPS
 # ------------

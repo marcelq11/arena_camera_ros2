@@ -52,6 +52,10 @@ class ArenaCameraNode : public rclcpp::Node
   rclcpp::TimerBase::SharedPtr m_wait_for_device_timer_callback_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr m_trigger_an_image_srv_;
 
+// Subscriber for parameter updates
+  rclcpp::Subscription<arena_camera_node::msg::Params>::SharedPtr m_params_subscriber_;
+
+
   std::string serial_;
   bool is_passed_serial_;
 
@@ -108,4 +112,6 @@ class ArenaCameraNode : public rclcpp::Node
       std::shared_ptr<std_srvs::srv::Trigger::Response> response);
   void msg_form_image_(Arena::IImage* pImage,
                        sensor_msgs::msg::Image& image_msg);
+// Callback function to handle parameter updates
+  void params_callback_(const arena_camera_node::msg::Params::SharedPtr msg);
 };

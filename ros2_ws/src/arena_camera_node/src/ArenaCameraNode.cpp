@@ -25,7 +25,7 @@ void ArenaCameraNode::parse_parameters_()
     serial_ = ""; // Set it to an empty string to indicate it's not passed.
     is_passed_serial_ = false;
 }
-    
+
     nextParameterToDeclare = "pixelformat";
     pixelformat_ros_ = this->declare_parameter("pixelformat", "");
     is_passed_pixelformat_ros_ = pixelformat_ros_ != "";
@@ -191,6 +191,42 @@ void ArenaCameraNode::initialize_()
                << '\n';
 
   log_info(pub_qos_info.str());
+
+    // Create a subscriber for the /params topic
+    auto qos = rclcpp::QoS(rclcpp::KeepLast(10));
+    m_params_subscriber_ = this->create_subscription<arena_camera_node::msg::Params>(
+        "/params", qos, std::bind(&ArenaCameraNode::params_callback_, this, std::placeholders::_1));
+}
+
+void ArenaCameraNode::params_callback_(const arena_camera_node::msg::Params::SharedPtr msg)
+{
+    auto nodemap = m_pDevice->GetNodeMap();
+
+    if (msg->exposure_time >= 0 && msg->exposure_time != exposure_time_) {
+        Arena::SetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto", "Off");
+        Arena::SetNodeValue<double>(nodemap, "exposureTime", msg->exposure_time);
+        log_info("ExposureTime updated to " + std::to_string(msg->exposure_time));
+    }
+
+    if (msg->gain >= 0) {
+        Arena::SetNodeValue<double>(nodemap, "gain", msg->gain);
+        log_info("Gain updated to " + std::to_string(msg->gain));
+    }
+
+    if (msg->height > 0) {
+        Arena::SetNodeValue<int64_t>(nodemap, "height", msg->height);
+        log_info("Height updated to " + std::to_string(msg->height));
+    }
+
+    if (msg->width > 0) {
+        Arena::SetNodeValue<int64_t>(nodemap, "width", msg->width);
+        log_info("Width updated to " + std::to_string(msg->width));
+    }
+    if (msg->pixelformat > 0) {
+        Arena::SetNodeValue<int64_t>(nodemap, "pixelformat", msg->pixelformat);
+        log_info("PixelFormat updated to " + std::to_string(msg->pixelformat));
+    }
+
 }
 
 void ArenaCameraNode::wait_for_device_timer_callback_()
