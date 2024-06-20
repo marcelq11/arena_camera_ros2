@@ -10,6 +10,9 @@
 #include "light_arena/deviceinfo_helper.h"
 #include "rclcpp_adapter/pixelformat_translation.h"
 #include "rclcpp_adapter/quilty_of_service_translation.cpp"
+#include "camera_msg/msg/camera_settings.hpp"
+
+//#include "arena_camera_node/msg/camera_settings.hpp"
 
 void ArenaCameraNode::parse_parameters_()
 {
@@ -41,6 +44,10 @@ void ArenaCameraNode::parse_parameters_()
     nextParameterToDeclare = "gain";
     gain_ = this->declare_parameter("gain", -1.0);
     is_passed_gain_ = gain_ >= 0;
+
+    nextParameterToDeclare = "gamma";
+    gamma_ = this->declare_parameter("gamma", 1.0);
+    is_passed_gamma_ = gamma_ >= 0;
 
     nextParameterToDeclare = "exposure_time";
     exposure_time_ = this->declare_parameter("exposure_time", -1.0);
@@ -191,42 +198,52 @@ void ArenaCameraNode::initialize_()
                << '\n';
 
   log_info(pub_qos_info.str());
-
+std::cerr << "Before sub." << std::endl;
     // Create a subscriber for the /params topic
-    auto qos = rclcpp::QoS(rclcpp::KeepLast(10));
-    m_params_subscriber_ = this->create_subscription<arena_camera_node::msg::Params>(
-        "/params", qos, std::bind(&ArenaCameraNode::params_callback_, this, std::placeholders::_1));
+  auto qos = rclcpp::QoS(rclcpp::KeepLast(10));
+  m_params_subscriber_ = this->create_subscription<camera_msg::msg::CameraSettings>(
+      "/params", qos, std::bind(&ArenaCameraNode::params_callback_, this, std::placeholders::_1));
 }
 
-void ArenaCameraNode::params_callback_(const arena_camera_node::msg::Params::SharedPtr msg)
+void ArenaCameraNode::params_callback_(const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
+    if (!msg) {
+    std::cerr << "Received a null message pointer in params_callback_." << std::endl;
+    return;
+    }
     auto nodemap = m_pDevice->GetNodeMap();
+    std::cout << "params_callback_ called" << std::endl;
 
-    if (msg->exposure_time >= 0 && msg->exposure_time != exposure_time_) {
-        Arena::SetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto", "Off");
-        Arena::SetNodeValue<double>(nodemap, "exposureTime", msg->exposure_time);
+    if (msg->exposure_time >= 0.0f && msg->exposure_time != exposure_time_) {
+        exposure_time_ = msg->exposure_time;
+        set_nodes_exposure_();
         log_info("ExposureTime updated to " + std::to_string(msg->exposure_time));
     }
 
-    if (msg->gain >= 0) {
-        Arena::SetNodeValue<double>(nodemap, "gain", msg->gain);
+    if (msg->gain >= 0.0f && msg->gain != gain_) {
+        gain_ = msg->gain;
+        set_nodes_gain_();
         log_info("Gain updated to " + std::to_string(msg->gain));
     }
 
-    if (msg->height > 0) {
-        Arena::SetNodeValue<int64_t>(nodemap, "height", msg->height);
+    if (msg->gamma >= 0.0f && msg->gamma != gamma_) {
+        gamma_ = msg->gamma;
+        set_nodes_gamma_();
+        log_info("Gamma updated to " + std::to_string(msg->gamma));
+    }
+
+    if ((msg->height > 0 && msg->height != height_) || (msg->width > 0 && msg->width != width_)) {
+        height_ = msg->height;
+        width_ = msg->width;
+        set_nodes_roi_();
         log_info("Height updated to " + std::to_string(msg->height));
     }
 
-    if (msg->width > 0) {
-        Arena::SetNodeValue<int64_t>(nodemap, "width", msg->width);
-        log_info("Width updated to " + std::to_string(msg->width));
+    if (!msg->pixelformat.empty() && msg->pixelformat != pixelformat_ros_) {
+        pixelformat_ros_ = msg->pixelformat;
+        set_nodes_pixelformat_();
+        log_info("PixelFormat updated to " + msg->pixelformat);
     }
-    if (msg->pixelformat > 0) {
-        Arena::SetNodeValue<int64_t>(nodemap, "pixelformat", msg->pixelformat);
-        log_info("PixelFormat updated to " + std::to_string(msg->pixelformat));
-    }
-
 }
 
 void ArenaCameraNode::wait_for_device_timer_callback_()
@@ -458,12 +475,13 @@ void ArenaCameraNode::set_nodes_()
   set_nodes_load_default_profile_();
   set_nodes_roi_();
   set_nodes_gain_();
+  set_nodes_gamma_();
   set_nodes_pixelformat_();
   set_nodes_exposure_();
   set_nodes_trigger_mode_();
   // configure Auto Negotiate Packet Size and Packet Resend
-  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamAutoNegotiatePacketSize", True);
-  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamPacketResendEnable", True);
+//  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamAutoNegotiatePacketSize", True);
+//  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamPacketResendEnable", True);
 
   //set_nodes_test_pattern_image_();
 }
@@ -508,6 +526,15 @@ void ArenaCameraNode::set_nodes_gain_()
     auto nodemap = m_pDevice->GetNodeMap();
     Arena::SetNodeValue<double>(nodemap, "Gain", gain_);
     log_info(std::string("\tGain set to ") + std::to_string(gain_));
+  }
+}
+
+void ArenaCameraNode::set_nodes_gamma_()
+{
+  if (is_passed_gamma_) {  // not default
+    auto nodemap = m_pDevice->GetNodeMap();
+    Arena::SetNodeValue<double>(nodemap, "Gamma", gamma_);
+    log_info(std::string("\tGamma set to ") + std::to_string(gamma_));
   }
 }
 

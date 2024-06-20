@@ -16,7 +16,7 @@
 #include <rclcpp/timer.hpp>           // WallTimer
 #include <sensor_msgs/msg/image.hpp>  //image msg published
 #include <std_srvs/srv/trigger.hpp>   // Trigger
-
+#include "camera_msg/msg/camera_settings.hpp"
 // arena sdk
 #include "ArenaApi.h"
 
@@ -53,7 +53,7 @@ class ArenaCameraNode : public rclcpp::Node
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr m_trigger_an_image_srv_;
 
 // Subscriber for parameter updates
-  rclcpp::Subscription<arena_camera_node::msg::Params>::SharedPtr m_params_subscriber_;
+  rclcpp::Subscription<camera_msg::msg::CameraSettings>::SharedPtr m_params_subscriber_;
 
 
   std::string serial_;
@@ -69,6 +69,9 @@ class ArenaCameraNode : public rclcpp::Node
 
   double gain_;
   bool is_passed_gain_;
+
+  double gamma_;
+  bool is_passed_gamma_;
 
   double exposure_time_;
   bool is_passed_exposure_time_;
@@ -101,6 +104,7 @@ class ArenaCameraNode : public rclcpp::Node
   void set_nodes_load_default_profile_();
   void set_nodes_roi_();
   void set_nodes_gain_();
+  void set_nodes_gamma_();
   void set_nodes_pixelformat_();
   void set_nodes_exposure_();
   void set_nodes_trigger_mode_();
@@ -113,5 +117,5 @@ class ArenaCameraNode : public rclcpp::Node
   void msg_form_image_(Arena::IImage* pImage,
                        sensor_msgs::msg::Image& image_msg);
 // Callback function to handle parameter updates
-  void params_callback_(const arena_camera_node::msg::Params::SharedPtr msg);
+  void params_callback_(const camera_msg::msg::CameraSettings::SharedPtr msg);
 };
