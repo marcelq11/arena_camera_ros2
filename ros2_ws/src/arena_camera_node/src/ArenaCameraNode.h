@@ -44,7 +44,10 @@ class ArenaCameraNode : public rclcpp::Node
   void log_warn(std::string msg) { RCLCPP_WARN(this->get_logger(), msg.c_str()); };
   void log_err(std::string msg) { RCLCPP_ERROR(this->get_logger(), msg.c_str()); };
 
+  bool is_device_created = false;
+
  private:
+  rclcpp::TimerBase::SharedPtr m_publish_timer;
   std::shared_ptr<Arena::ISystem> m_pSystem;
   std::shared_ptr<Arena::IDevice> m_pDevice;
 
@@ -54,7 +57,7 @@ class ArenaCameraNode : public rclcpp::Node
 
 // Subscriber for parameter updates
   rclcpp::Subscription<camera_msg::msg::CameraSettings>::SharedPtr m_params_subscriber_;
-
+  bool is_stream_started_ = false;
 
   std::string serial_;
   bool is_passed_serial_;
@@ -119,3 +122,4 @@ class ArenaCameraNode : public rclcpp::Node
 // Callback function to handle parameter updates
   void params_callback_(const camera_msg::msg::CameraSettings::SharedPtr msg);
 };
+
