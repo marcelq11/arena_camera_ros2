@@ -319,7 +319,7 @@ void ArenaCameraNode::publish_images_()
   Arena::IImage* pImage = nullptr;
     if(!is_stream_started_){
         return;
-    }
+    }while (rclcpp::ok()) {
     try {
       auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
       pImage = m_pDevice->GetImage(1000);
@@ -340,6 +340,7 @@ void ArenaCameraNode::publish_images_()
                  e.what());
       }
     }
+};
 }
 
 void ArenaCameraNode::msg_form_image_(Arena::IImage* pImage,
@@ -675,3 +676,4 @@ std::cout << "set_nodes_test_pattern_image_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
   Arena::SetNodeValue<GenICam::gcstring>(nodemap, "TestPattern", "Pattern3");
 }
+

@@ -122,3 +122,4 @@ class ArenaCameraNode : public rclcpp::Node
 // Callback function to handle parameter updates
   void params_callback_(const camera_msg::msg::CameraSettings::SharedPtr msg);
 };
+
