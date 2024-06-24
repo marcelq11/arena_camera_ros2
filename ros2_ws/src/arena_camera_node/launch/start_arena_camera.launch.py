@@ -9,12 +9,13 @@ def generate_launch_description():
         'config',
         'arena_camera_params.yaml'
     )
-
-    return LaunchDescription([
-        Node(
+    camera_node = Node(
             package='arena_camera_node',
             executable='start',
             name='arena_camera_node',
             parameters=[config]
         )
+
+    return LaunchDescription([
+        camera_node,
     ])
