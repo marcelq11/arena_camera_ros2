@@ -1,4 +1,5 @@
 from setuptools import find_packages, setup
+from glob import glob
 
 package_name = 'camera_manager'
 
@@ -11,6 +12,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/msg', ['msg/CameraSettings.msg']),
+        ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -22,6 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
         'camera_setting = camera_manager.camera_setting:main',
+        'camera_manager = camera_manager.camera_manager:main',
         ],
     },
 )

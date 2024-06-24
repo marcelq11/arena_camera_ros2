@@ -8,10 +8,12 @@
   <license>TODO: License declaration</license>
 
 
-  <test_depend>python3-pytest</test_depend>
-  <buildtool_depend>ament_python</buildtool_depend>
+  <depend>launch_ros</depend>
   <depend>rosidl_default_generators</depend>
   <depend>rosidl_default_runtime</depend>
+
+  <test_depend>python3-pytest</test_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
   <exec_depend>rclpy</exec_depend>
 
   <export>
