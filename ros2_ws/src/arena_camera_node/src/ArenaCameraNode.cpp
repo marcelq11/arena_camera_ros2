@@ -16,6 +16,7 @@
 
 void ArenaCameraNode::parse_parameters_()
 {
+  std::cout << "parse_parameters" << std::endl;
   std::string nextParameterToDeclare = "";
   try {
     nextParameterToDeclare = "serial";
@@ -82,6 +83,7 @@ void ArenaCameraNode::parse_parameters_()
 
 void ArenaCameraNode::initialize_()
 {
+    std::cout << "initialize" << std::endl;
   using namespace std::chrono_literals;
   // ARENASDK ---------------------------------------------------------------
   // Custom deleter for system
@@ -198,56 +200,71 @@ void ArenaCameraNode::initialize_()
                << '\n';
 
   log_info(pub_qos_info.str());
-std::cerr << "Before sub." << std::endl;
-    // Create a subscriber for the /params topic
-  auto qos = rclcpp::QoS(rclcpp::KeepLast(10));
+  // Create a subscriber for the /params topic
   m_params_subscriber_ = this->create_subscription<camera_msg::msg::CameraSettings>(
-      "/params", qos, std::bind(&ArenaCameraNode::params_callback_, this, std::placeholders::_1));
+      "/params", 10, std::bind(&ArenaCameraNode::params_callback_, this, std::placeholders::_1));
+
+  //petla do sub
+  auto timer_callback = [this]() -> void {
+        this->publish_images_();
+    };
+    auto publish_interval = std::chrono::milliseconds(100); // Częstotliwość publikacji obrazów
+    m_publish_timer = this->create_wall_timer(publish_interval, timer_callback);
 }
 
 void ArenaCameraNode::params_callback_(const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
+    std::cout << "params_callback_" << std::endl;
     if (!msg) {
     std::cerr << "Received a null message pointer in params_callback_." << std::endl;
     return;
     }
-    auto nodemap = m_pDevice->GetNodeMap();
-    std::cout << "params_callback_ called" << std::endl;
+    std::cout << "calback!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+    if (is_device_created == true){
+        auto nodemap = m_pDevice->GetNodeMap();
 
-    if (msg->exposure_time >= 0.0f && msg->exposure_time != exposure_time_) {
-        exposure_time_ = msg->exposure_time;
-        set_nodes_exposure_();
-        log_info("ExposureTime updated to " + std::to_string(msg->exposure_time));
+        if ((msg->exposure_time >= 0.0) && (msg->exposure_time != exposure_time_)) {
+            std::cout << "deb2" << std::endl;
+            exposure_time_ = msg->exposure_time;
+            set_nodes_exposure_();
+            std::cout << "deb3" << std::endl;
+            log_info("ExposureTime updated to " + std::to_string(msg->exposure_time));
+        }
+
+        if (msg->gain >= 0.0f && msg->gain != gain_) {
+            gain_ = msg->gain;
+            set_nodes_gain_();
+            log_info("Gain updated to " + std::to_string(msg->gain));
+        }
+
+        if (msg->gamma >= 0.0f && msg->gamma != gamma_) {
+            gamma_ = msg->gamma;
+            set_nodes_gamma_();
+            log_info("Gamma updated to " + std::to_string(msg->gamma));
+        }
+
+        if ((msg->height > 0 && msg->height != height_) || (msg->width > 0 && msg->width != width_)) {
+            height_ = msg->height;
+            width_ = msg->width;
+            set_nodes_roi_();
+            log_info("Height updated to " + std::to_string(msg->height));
+        }
+
+        if (!msg->pixelformat.empty() && msg->pixelformat != pixelformat_ros_) {
+            pixelformat_ros_ = msg->pixelformat;
+            set_nodes_pixelformat_();
+            log_info("PixelFormat updated to " + msg->pixelformat);
+        }
+
     }
 
-    if (msg->gain >= 0.0f && msg->gain != gain_) {
-        gain_ = msg->gain;
-        set_nodes_gain_();
-        log_info("Gain updated to " + std::to_string(msg->gain));
-    }
 
-    if (msg->gamma >= 0.0f && msg->gamma != gamma_) {
-        gamma_ = msg->gamma;
-        set_nodes_gamma_();
-        log_info("Gamma updated to " + std::to_string(msg->gamma));
-    }
 
-    if ((msg->height > 0 && msg->height != height_) || (msg->width > 0 && msg->width != width_)) {
-        height_ = msg->height;
-        width_ = msg->width;
-        set_nodes_roi_();
-        log_info("Height updated to " + std::to_string(msg->height));
-    }
-
-    if (!msg->pixelformat.empty() && msg->pixelformat != pixelformat_ros_) {
-        pixelformat_ros_ = msg->pixelformat;
-        set_nodes_pixelformat_();
-        log_info("PixelFormat updated to " + msg->pixelformat);
-    }
 }
 
 void ArenaCameraNode::wait_for_device_timer_callback_()
 {
+    std::cout << "wait_for_device_timer_callback_" << std::endl;
   // something happend while checking for cameras
   if (!rclcpp::ok()) {
     log_err("Interrupted while waiting for arena camera. Exiting.");
@@ -269,32 +286,47 @@ void ArenaCameraNode::wait_for_device_timer_callback_()
              " arena device(s) has been discoved.");
     run_();
   }
+
 }
 
 void ArenaCameraNode::run_()
 {
+  std::cout << "run_" << std::endl;
   auto device = create_device_ros_();
   m_pDevice.reset(device);
-  set_nodes_();
-  m_pDevice->StartStream();
+  is_device_created = true;
 
-  if (!trigger_mode_activated_) {
-    publish_images_();
-  } else {
-    // else ros::spin will
-  }
+  set_nodes_();
+
+
+
+  std::cout << "startstream" << std::endl;
+  m_pDevice->StartStream();
+  is_stream_started_ = true;
+//
+//  if (!trigger_mode_activated_) {
+//    publish_images_();
+//  } else {
+//    // else ros::spin will
+//  }
+
+
 }
 
 void ArenaCameraNode::publish_images_()
 {
+    std::cout << "publish_images_" << std::endl;
   Arena::IImage* pImage = nullptr;
-  while (rclcpp::ok()) {
+    if(!is_stream_started_){
+        return;
+    }
     try {
       auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
       pImage = m_pDevice->GetImage(1000);
       msg_form_image_(pImage, *p_image_msg);
 
       m_pub_->publish(std::move(p_image_msg));
+
 
       log_info(std::string("image ") + std::to_string(pImage->GetFrameId()) +
                " published to " + topic_);
@@ -308,12 +340,12 @@ void ArenaCameraNode::publish_images_()
                  e.what());
       }
     }
-  };
 }
 
 void ArenaCameraNode::msg_form_image_(Arena::IImage* pImage,
                                       sensor_msgs::msg::Image& image_msg)
 {
+    std::cout << "msg_form_image_" << std::endl;
   try {
     // 1 ) Header
     //      - stamp.sec
@@ -375,6 +407,7 @@ void ArenaCameraNode::publish_an_image_on_trigger_(
     std::shared_ptr<std_srvs::srv::Trigger::Request> request /*unused*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
+    std::cout << "publish_an_image_on_trigger_" << std::endl;
   if (!trigger_mode_activated_) {
     std::string msg =
         "Failed to trigger image because the device is not in trigger mode."
@@ -451,6 +484,7 @@ void ArenaCameraNode::publish_an_image_on_trigger_(
 
 Arena::IDevice* ArenaCameraNode::create_device_ros_()
 {
+    std::cout << "create_device_ros_" << std::endl;
   m_pSystem->UpdateDevices(100);  // in millisec
   auto device_infos = m_pSystem->GetDevices();
   if (!device_infos.size()) {
@@ -472,6 +506,7 @@ Arena::IDevice* ArenaCameraNode::create_device_ros_()
 
 void ArenaCameraNode::set_nodes_()
 {
+    std::cout << "set_nodes" << std::endl;
   set_nodes_load_default_profile_();
   set_nodes_roi_();
   set_nodes_gain_();
@@ -479,6 +514,8 @@ void ArenaCameraNode::set_nodes_()
   set_nodes_pixelformat_();
   set_nodes_exposure_();
   set_nodes_trigger_mode_();
+
+
   // configure Auto Negotiate Packet Size and Packet Resend
 //  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamAutoNegotiatePacketSize", True);
 //  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamPacketResendEnable", True);
@@ -488,7 +525,9 @@ void ArenaCameraNode::set_nodes_()
 
 void ArenaCameraNode::set_nodes_load_default_profile_()
 {
+    std::cout << "set_nodes_load_default_profile_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
+
   // device run on default profile all the time if no args are passed
   // otherwise, overwise only these params
   Arena::SetNodeValue<GenICam::gcstring>(nodemap, "UserSetSelector", "Default");
@@ -499,6 +538,7 @@ void ArenaCameraNode::set_nodes_load_default_profile_()
 
 void ArenaCameraNode::set_nodes_roi_()
 {
+    std::cout << "set_nodes_roi_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
 
   // Width -------------------------------------------------
@@ -522,6 +562,7 @@ void ArenaCameraNode::set_nodes_roi_()
 
 void ArenaCameraNode::set_nodes_gain_()
 {
+std::cout << "set_nodes_gain_" << std::endl;
   if (is_passed_gain_) {  // not default
     auto nodemap = m_pDevice->GetNodeMap();
     Arena::SetNodeValue<double>(nodemap, "Gain", gain_);
@@ -531,6 +572,7 @@ void ArenaCameraNode::set_nodes_gain_()
 
 void ArenaCameraNode::set_nodes_gamma_()
 {
+std::cout << "set_nodes_gamma_" << std::endl;
   if (is_passed_gamma_) {  // not default
     auto nodemap = m_pDevice->GetNodeMap();
     Arena::SetNodeValue<double>(nodemap, "Gamma", gamma_);
@@ -540,6 +582,7 @@ void ArenaCameraNode::set_nodes_gamma_()
 
 void ArenaCameraNode::set_nodes_pixelformat_()
 {
+std::cout << "set_nodes_pixelformat_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
   // TODO ---------------------------------------------------------------------
   // PIXEL FORMAT HANDLEING
@@ -579,6 +622,7 @@ void ArenaCameraNode::set_nodes_pixelformat_()
 
 void ArenaCameraNode::set_nodes_exposure_()
 {
+std::cout << "set_nodes_exposure_" << std::endl;
   if (is_passed_exposure_time_) {
     auto nodemap = m_pDevice->GetNodeMap();
     Arena::SetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto", "Off");
@@ -588,6 +632,7 @@ void ArenaCameraNode::set_nodes_exposure_()
 
 void ArenaCameraNode::set_nodes_trigger_mode_()
 {
+std::cout << "set_nodes_trigger_mode_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
   if (trigger_mode_activated_) {
     if (exposure_time_ < 0) {
@@ -626,6 +671,7 @@ void ArenaCameraNode::set_nodes_trigger_mode_()
 // just for debugging
 void ArenaCameraNode::set_nodes_test_pattern_image_()
 {
+std::cout << "set_nodes_test_pattern_image_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
   Arena::SetNodeValue<GenICam::gcstring>(nodemap, "TestPattern", "Pattern3");
 }
