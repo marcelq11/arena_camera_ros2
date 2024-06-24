@@ -319,7 +319,7 @@ void ArenaCameraNode::publish_images_()
   Arena::IImage* pImage = nullptr;
     if(!is_stream_started_){
         return;
-    }while (rclcpp::ok()) {
+    }
     try {
       auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
       pImage = m_pDevice->GetImage(1000);
@@ -340,7 +340,6 @@ void ArenaCameraNode::publish_images_()
                  e.what());
       }
     }
-};
 }
 
 void ArenaCameraNode::msg_form_image_(Arena::IImage* pImage,
