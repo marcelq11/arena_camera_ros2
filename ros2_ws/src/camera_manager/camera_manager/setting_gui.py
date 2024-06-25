@@ -3,22 +3,27 @@ import tkinter as tk
 
 
 class CameraGUI:
-    def __init__(self, update_callback):
-        self.pixel_format = 0.0  #None
-        self.gain = 0.0  #None
-        self.exposure = 0.0  #None
-        self.gamma = 0.0  #None
-        self.pixel_format_list = ["bayer_rggb8", "bayer_rggb12", "bayer_rggb16", "bayer_bggr8", "bayer_bggr12",
-                                  "bayer_bggr16", "bayer_gbrg8", "bayer_gbrg12", "bayer_gbrg16", "bayer_grbg8",
-                                  "bayer_grbg12", "bayer_grbg16", "mono8", "mono16"]
+    def __init__(self, update_callback, parameters_path=None):
+        self.pixel_format = None
+        self.gain = None
+        self.exposure = None
+        self.gamma = None
+        self.width = None
+        self.height = None
+        self.load_parameters()
 
+        self.parameters_path = parameters_path
         self.gamma_step = 0.1
         self.gain_step = 1.0
         self.exposure_step = 1000.0
+        self.pixel_format_list = ["rgb8", "rgba8", "rgb16", "rgba16", "bgr8", "bgra8", "bgr16", "bgra16",
+                                  "mono8", "mono16", "bayer_rggb8", "bayer_bggr8", "bayer_gbrg8", "bayer_grbg8",
+                                  "bayer_rggb16", "bayer_bggr16", "bayer_gbrg16", "bayer_grbg16", "yuv422"]
 
         self.update_callback = update_callback
         self.root = tk.Tk()
         self.root.title("Camera Settings")
+        self.root.geometry('500x150+500+500')
 
         tk.Label(self.root, text="Gain").grid(row=0, column=1)
         self.gain_entry = tk.Entry(self.root)
@@ -59,14 +64,38 @@ class CameraGUI:
                                                command=lambda: self.change_param("gamma", -self.gamma_step))
         self.decrease_Gamma_button.grid(row=1, column=6)
 
-        self.pixel_format = tk.StringVar(self.root)
-        self.pixel_format.set(self.pixel_format_list[0])
-        tk.Label(self.root, text="Pixel Format").grid(row=0, column=10)
-        self.pixel_format_menu = tk.OptionMenu(self.root, self.pixel_format, *self.pixel_format_list)
-        self.pixel_format_menu.grid(row=1, column=10)
+        self.pixel_format_var = tk.StringVar(self.root)
+        self.pixel_format_var.set(self.pixel_format)
+        tk.Label(self.root, text="Pixel Format").grid(row=2, column=7)
+        self.pixel_format_menu = tk.OptionMenu(self.root, self.pixel_format_var, *self.pixel_format_list)
+        self.pixel_format_menu.grid(row=3, column=7)
 
-        tk.Button(self.root, text="Update Settings", command=update_callback).grid(row=2, columnspan=2)
+        tk.Label(self.root, text="Width").grid(row=2, column=1)
+        self.width_entry = tk.Entry(self.root)
+        self.width_entry.grid(row=3, column=1)
+        self.width_entry.config(width=7)
+        self.width_entry.insert(0, str(self.width))
 
+        tk.Label(self.root, text="Height").grid(row=2, column=4)
+        self.height_entry = tk.Entry(self.root)
+        self.height_entry.grid(row=3, column=4)
+        self.height_entry.config(width=7)
+        self.height_entry.insert(0, str(self.height))
+
+        tk.Button(self.root, text="Update Settings", command=update_callback).grid(row=4, column=4)
+
+    def load_parameters(self):
+        self.gain = 0.0
+        self.exposure = 0.0
+        self.gamma = 0.0
+        self.pixel_format = "bgr8"
+        self.width = 2048
+        self.height = 2048
+        #TODO: make it load from file
+
+    def save_parameters(self):
+        #TODO: save to file
+        pass
 
     def run(self):
         self.root.mainloop()
@@ -81,6 +110,8 @@ class CameraGUI:
         self.gamma_entry.delete(0, tk.END)
         self.gamma_entry.insert(0, str(self.gamma))
 
+        self.pixel_format = self.pixel_format_var.get()
+
     def change_param(self, param_name, value):
         current_value = getattr(self, param_name)
         new_value = current_value + value
@@ -93,9 +124,11 @@ class CameraGUI:
         self.exposure = float(self.exposure_entry.get())
         self.gamma = float(self.gamma_entry.get())
         self.gain = float(self.gain_entry.get())
-        self.pixel_format = 'bayer_rggb8'
+        self.pixel_format = self.pixel_format_var.get()
+        self.width =1
+        self.height =1
         print(f"values: {self.gain}, {self.exposure}, {self.gamma}, {self.pixel_format}")
-        return self.gain, self.exposure, self.gamma, self.pixel_format
+        return self.gain, self.exposure, self.gamma, self.pixel_format, self.width, self.height
 
 
 #create a main loop
