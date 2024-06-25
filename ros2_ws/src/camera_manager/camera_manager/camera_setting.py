@@ -12,11 +12,11 @@ path_to_camera_params ='/home/opszalek/arena_camera_ros2/ros2_ws/src/arena_camer
 class CameraPublisher(Node):
     def __init__(self):
         super().__init__('camera_publisher')
-        self.publisher_ = self.create_publisher(CameraSettings, 'camera_params', 10)
+        self.publisher_ = self.create_publisher(CameraSettings, 'params', 10)
         self.gui = CameraGUI(self.update_settings, )  # Przekazanie callback
         self.subscription = self.create_subscription(
             Image,
-            '/lucid_vision/camera_1/image',
+            '/image',
             self.image_callback,
             qos_profile)
 
@@ -43,6 +43,7 @@ class CameraPublisher(Node):
         msg.exposure_time = exposure
         msg.gamma = gamma
         msg.gain = gain
+        print("______________________________________________")
         msg.pixelformat = pixel_format
         msg.width = width
         msg.height = height

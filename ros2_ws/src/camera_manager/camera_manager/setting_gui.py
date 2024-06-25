@@ -85,11 +85,11 @@ class CameraGUI:
         tk.Button(self.root, text="Update Settings", command=update_callback).grid(row=4, column=4)
 
     def load_parameters(self):
-        self.gain = 0.0
-        self.exposure = 0.0
-        self.gamma = 0.0
-        self.pixel_format = "bgr8"
-        self.width = 2048
+        self.gain = 15.0
+        self.exposure = 2000.0
+        self.gamma = 1.0
+        self.pixel_format = "bayer_rggb8"
+        self.width = 2448
         self.height = 2048
         #TODO: make it load from file
 
@@ -125,8 +125,8 @@ class CameraGUI:
         self.gamma = float(self.gamma_entry.get())
         self.gain = float(self.gain_entry.get())
         self.pixel_format = self.pixel_format_var.get()
-        self.width =1
-        self.height =1
+        self.width = int(self.width_entry.get())
+        self.height = int(self.height_entry.get())
         print(f"values: {self.gain}, {self.exposure}, {self.gamma}, {self.pixel_format}")
         return self.gain, self.exposure, self.gamma, self.pixel_format, self.width, self.height
 
