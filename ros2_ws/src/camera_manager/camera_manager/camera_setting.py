@@ -6,13 +6,17 @@ from camera_msg.msg import CameraSettings
 from sensor_msgs.msg import Image
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 import cv2
+from cv_bridge import CvBridge
 
 qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
-path_to_camera_params ='/home/opszalek/arena_camera_ros2/ros2_ws/src/arena_camera_node/config'#path to camera parameters in arena_camera_node
+path_to_camera_params = '/home/opszalek/arena_camera_ros2/ros2_ws/src/arena_camera_node/config'  #path to camera parameters in arena_camera_node
+
+
 class CameraPublisher(Node):
     def __init__(self):
         super().__init__('camera_publisher')
         self.publisher_ = self.create_publisher(CameraSettings, 'params', 10)
+        self.bridge = CvBridge()
         self.gui = CameraGUI(self.update_settings, )  # Przekazanie callback
         self.subscription = self.create_subscription(
             Image,
@@ -54,11 +58,13 @@ class CameraPublisher(Node):
         rclpy.spin_once(self, timeout_sec=0.1)
         self.gui.run()  # Uruchomienie GUI
 
+
 def main(args=None):
     rclpy.init(args=args)
     camera_publisher = CameraPublisher()
     camera_publisher.run()
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
