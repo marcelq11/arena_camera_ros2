@@ -17,7 +17,7 @@ class CameraPublisher(Node):
                              error_func=self.raise_error, parameters_path=path_to_camera_params)  # Przekazanie callback
 
     def update_settings(self):
-        gain, exposure, gamma, pixel_format, width, height = self.gui.get_settings()
+        gain, exposure, gamma, pixel_format, width, height = self.gui.return_params()
         msg = CameraSettings()
         msg.exposure_time = exposure
         msg.gamma = gamma
@@ -40,6 +40,7 @@ def main(args=None):
     rclpy.init(args=args)
     camera_publisher = CameraPublisher()
     camera_publisher.run()
+    camera_publisher.gui.root.destroy()
     rclpy.shutdown()
 
 

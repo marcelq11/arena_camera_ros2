@@ -2,7 +2,7 @@
 import tkinter as tk
 import yaml
 import os
-import warnings
+from tkinter import messagebox
 
 
 class CameraGUI:
@@ -89,6 +89,7 @@ class CameraGUI:
         self.height_entry.insert(0, str(self.height))
 
         tk.Button(self.root, text="Update Settings", command=update_callback).grid(row=4, column=4)
+        self.update_entries()
 
     def load_parameters_from_file(self):
         if not os.path.exists(self.parameters_path):
@@ -130,7 +131,6 @@ class CameraGUI:
         with open(self.parameters_path, 'w') as file:
             yaml.dump(parameters, file)
 
-
     def run(self):
         self.root.mainloop()
 
@@ -144,7 +144,13 @@ class CameraGUI:
         self.gamma_entry.delete(0, tk.END)
         self.gamma_entry.insert(0, str(self.gamma))
 
-        self.pixel_format = self.pixel_format_var.get()
+        self.pixel_format_var.set(self.pixel_format)
+
+        self.width_entry.delete(0, tk.END)
+        self.width_entry.insert(0, str(self.width))
+
+        self.height_entry.delete(0, tk.END)
+        self.height_entry.insert(0, str(self.height))
 
     def change_param(self, param_name, value):
         current_value = getattr(self, param_name)
@@ -154,21 +160,45 @@ class CameraGUI:
         self.update_entries()
         self.update_callback()
 
-    def get_settings(self):
-        self.exposure = float(self.exposure_entry.get())
-        self.gamma = float(self.gamma_entry.get())
-        self.gain = float(self.gain_entry.get())
-        self.pixel_format = str(self.pixel_format_var.get())
-        self.width = int(self.width_entry.get())
-        self.height = int(self.height_entry.get())
+    def check_is_restart_needed(self, width, height, pixel_format):
+        if (self.pixel_format != pixel_format or
+                self.width != width or self.height != height):
+            return True
+        return False
+
+    def handle_parameters(self):
+        exposure, gamma, gain, width, height, pixel_format = self.get_parameters()
+        if exposure < 0:
+            exposure = 1.0
+        if gamma < 0:
+            gamma = 1.0
+        if gain < 0:
+            gain = 0.0
+        if width < 0:
+            width = self.width
+        if height < 0:
+            height = self.height
+        self.exposure = exposure
+        self.gamma = gamma
+        self.gain = gain
+        if self.check_is_restart_needed(width, height, pixel_format):
+            answer = messagebox.askquestion("Restart",
+                                            "Zmiana width/height/pixel format wymaga restartu. Czy kontynuować?")
+            if answer == 'yes':
+                self.pixel_format = pixel_format
+                self.width = width
+                self.height = height
+        self.update_entries()
+
+    def get_parameters(self):
+        exposure = float(self.exposure_entry.get())
+        gamma = float(self.gamma_entry.get())
+        gain = float(self.gain_entry.get())
+        pixel_format = str(self.pixel_format_var.get())
+        width = int(self.width_entry.get())
+        height = int(self.height_entry.get())
+        return exposure, gamma, gain, width, height, pixel_format
+
+    def return_params(self):
+        self.handle_parameters()
         return self.gain, self.exposure, self.gamma, self.pixel_format, self.width, self.height
-
-
-#create a main loop
-def main():
-    app = CameraGUI(CameraGUI.get_settings)
-    app.run()
-
-
-if __name__ == '__main__':
-    main()
