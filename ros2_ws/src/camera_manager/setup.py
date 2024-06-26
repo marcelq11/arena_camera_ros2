@@ -25,6 +25,7 @@ setup(
         'console_scripts': [
         'camera_setting = camera_manager.camera_setting:main',
         'camera_manager = camera_manager.camera_manager:main',
+        'camera_preview = camera_manager.camera_preview:main',
         ],
     },
 )

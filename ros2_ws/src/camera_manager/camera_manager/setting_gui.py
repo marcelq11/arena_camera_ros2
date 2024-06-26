@@ -23,7 +23,7 @@ class CameraGUI:
         self.update_callback = update_callback
         self.root = tk.Tk()
         self.root.title("Camera Settings")
-        self.root.geometry('500x150+500+500')
+        self.root.geometry('550x150+500+500')
 
         tk.Label(self.root, text="Gain").grid(row=0, column=1)
         self.gain_entry = tk.Entry(self.root)
