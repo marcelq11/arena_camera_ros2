@@ -1,18 +1,25 @@
 # camera_gui.py
 import tkinter as tk
+import yaml
+import os
+import warnings
 
 
 class CameraGUI:
-    def __init__(self, update_callback, parameters_path=None):
-        self.pixel_format = None
-        self.gain = None
-        self.exposure = None
-        self.gamma = None
-        self.width = None
-        self.height = None
-        self.load_parameters()
+    def __init__(self, update_callback, error_func, parameters_path=''):
+        #Some predefined parameters
+        self.pixel_format = 'bayer_rggb8'
+        self.gain = 5.0
+        self.exposure = 10000.0
+        self.gamma = 1.0
+        self.width = 2448
+        self.height = 2048
 
         self.parameters_path = parameters_path
+        self.error_callback = error_func
+        self.update_callback = update_callback
+        self.load_parameters()
+
         self.gamma_step = 0.1
         self.gain_step = 1.0
         self.exposure_step = 1000.0
@@ -20,7 +27,6 @@ class CameraGUI:
                                   "mono8", "mono16", "bayer_rggb8", "bayer_bggr8", "bayer_gbrg8", "bayer_grbg8",
                                   "bayer_rggb16", "bayer_bggr16", "bayer_gbrg16", "bayer_grbg16", "yuv422"]
 
-        self.update_callback = update_callback
         self.root = tk.Tk()
         self.root.title("Camera Settings")
         self.root.geometry('550x150+500+500')
@@ -84,14 +90,30 @@ class CameraGUI:
 
         tk.Button(self.root, text="Update Settings", command=update_callback).grid(row=4, column=4)
 
+    def load_parameters_from_file(self):
+        if not os.path.exists(self.parameters_path):
+            self.error_callback(f"Plik z parametrami o ścieżce {self.parameters_path} nie istnieje.\n"
+                                f"Utwórz plik z parametrami lub podaj poprawną ścieżkę.\n"
+                                f"W przypadku braku pliku z parametrami zostaną użyte domyślne wartości.")
+            return None
+
+        try:
+            with open(self.parameters_path, 'r') as file:
+                camera_parameters = yaml.load(file, Loader=yaml.FullLoader)
+                return camera_parameters['arena_camera_node']['ros__parameters']
+        except Exception as e:
+            self.error_callback(f"Błąd podczas ładowania pliku z parametrami: {e}")
+            return None
+
     def load_parameters(self):
-        self.gain = 15.0
-        self.exposure = 2000.0
-        self.gamma = 1.0
-        self.pixel_format = "bayer_rggb8"
-        self.width = 2448
-        self.height = 2048
-        #TODO: make it load from file
+        camera_parameters = self.load_parameters_from_file()
+        if camera_parameters is not None:
+            self.gain = camera_parameters['gain']
+            self.exposure = camera_parameters['exposure_time']
+            self.gamma = camera_parameters['gamma']
+            self.pixel_format = camera_parameters['pixelformat']
+            self.width = camera_parameters['width']
+            self.height = camera_parameters['height']
 
     def save_parameters(self):
         #TODO: save to file
@@ -115,7 +137,6 @@ class CameraGUI:
     def change_param(self, param_name, value):
         current_value = getattr(self, param_name)
         new_value = current_value + value
-        print(f"Changing {param_name} from {current_value} to {new_value}")
         setattr(self, param_name, new_value)
         self.update_entries()
         self.update_callback()
@@ -124,10 +145,9 @@ class CameraGUI:
         self.exposure = float(self.exposure_entry.get())
         self.gamma = float(self.gamma_entry.get())
         self.gain = float(self.gain_entry.get())
-        self.pixel_format = self.pixel_format_var.get()
+        self.pixel_format = str(self.pixel_format_var.get())
         self.width = int(self.width_entry.get())
         self.height = int(self.height_entry.get())
-        print(f"values: {self.gain}, {self.exposure}, {self.gamma}, {self.pixel_format}")
         return self.gain, self.exposure, self.gamma, self.pixel_format, self.width, self.height
 
 

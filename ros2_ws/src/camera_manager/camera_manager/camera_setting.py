@@ -13,7 +13,7 @@ class CameraPublisher(Node):
     def __init__(self):
         super().__init__('camera_publisher')
         self.publisher_ = self.create_publisher(CameraSettings, 'params', 10)
-        self.gui = CameraGUI(self.update_settings, )  # Przekazanie callback
+        self.gui = CameraGUI(update_callback=self.update_settings, error_func=self.raise_error)  # Przekazanie callback
 
     def update_settings(self):
         gain, exposure, gamma, pixel_format, width, height = self.gui.get_settings()
@@ -26,6 +26,9 @@ class CameraPublisher(Node):
         msg.height = height
         self.publisher_.publish(msg)
         self.get_logger().info(f'Publishing: {msg}')
+
+    def raise_error(self, e):
+        self.get_logger().warn(e)
 
     def run(self):
         rclpy.spin_once(self, timeout_sec=0.1)
