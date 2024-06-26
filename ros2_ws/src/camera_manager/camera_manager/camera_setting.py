@@ -6,14 +6,15 @@ from camera_msg.msg import CameraSettings
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
-path_to_camera_params = '/home/opszalek/arena_camera_ros2/ros2_ws/src/arena_camera_node/config'  #path to camera parameters in arena_camera_node
+path_to_camera_params = '/home/opszalek/arena_camera_ros2/ros2_ws/src/arena_camera_node/config/arena_camera_params.yaml'  #path to camera parameters in arena_camera_node
 
 
 class CameraPublisher(Node):
     def __init__(self):
         super().__init__('camera_publisher')
         self.publisher_ = self.create_publisher(CameraSettings, 'params', 10)
-        self.gui = CameraGUI(update_callback=self.update_settings, error_func=self.raise_error)  # Przekazanie callback
+        self.gui = CameraGUI(update_callback=self.update_settings,
+                             error_func=self.raise_error, parameters_path=path_to_camera_params)  # Przekazanie callback
 
     def update_settings(self):
         gain, exposure, gamma, pixel_format, width, height = self.gui.get_settings()

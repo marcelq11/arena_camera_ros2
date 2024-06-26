@@ -100,13 +100,14 @@ class CameraGUI:
         try:
             with open(self.parameters_path, 'r') as file:
                 camera_parameters = yaml.load(file, Loader=yaml.FullLoader)
-                return camera_parameters['arena_camera_node']['ros__parameters']
+                return camera_parameters
         except Exception as e:
             self.error_callback(f"Błąd podczas ładowania pliku z parametrami: {e}")
             return None
 
     def load_parameters(self):
-        camera_parameters = self.load_parameters_from_file()
+        parameters = self.load_parameters_from_file()
+        camera_parameters = parameters['arena_camera_node']['ros__parameters']
         if camera_parameters is not None:
             self.gain = camera_parameters['gain']
             self.exposure = camera_parameters['exposure_time']
@@ -116,8 +117,19 @@ class CameraGUI:
             self.height = camera_parameters['height']
 
     def save_parameters(self):
-        #TODO: save to file
-        pass
+        parameters = self.load_parameters_from_file()
+        if parameters is None:
+            return
+        camera_parameters = parameters['arena_camera_node']['ros__parameters']
+        camera_parameters['gain'] = self.gain
+        camera_parameters['exposure_time'] = self.exposure
+        camera_parameters['gamma'] = self.gamma
+        camera_parameters['pixelformat'] = self.pixel_format
+        camera_parameters['width'] = self.width
+        camera_parameters['height'] = self.height
+        with open(self.parameters_path, 'w') as file:
+            yaml.dump(parameters, file)
+
 
     def run(self):
         self.root.mainloop()
@@ -138,6 +150,7 @@ class CameraGUI:
         current_value = getattr(self, param_name)
         new_value = current_value + value
         setattr(self, param_name, new_value)
+        self.save_parameters()
         self.update_entries()
         self.update_callback()
 
