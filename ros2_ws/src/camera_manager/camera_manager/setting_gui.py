@@ -108,8 +108,8 @@ class CameraGUI:
 
     def load_parameters(self):
         parameters = self.load_parameters_from_file()
-        camera_parameters = parameters['arena_camera_node']['ros__parameters']
-        if camera_parameters is not None:
+        if parameters is not None:
+            camera_parameters = parameters['arena_camera_node']['ros__parameters']
             self.gain = camera_parameters['gain']
             self.exposure = camera_parameters['exposure_time']
             self.gamma = camera_parameters['gamma']
