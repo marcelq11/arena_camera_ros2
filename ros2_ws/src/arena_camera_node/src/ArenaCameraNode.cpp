@@ -214,12 +214,10 @@ void ArenaCameraNode::initialize_()
 
 void ArenaCameraNode::params_callback_(const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
-    std::cout << "params_callback_" << std::endl;
     if (!msg) {
     std::cerr << "Received a null message pointer in params_callback_." << std::endl;
     return;
     }
-    std::cout << "calback!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
     if (is_device_created == true){
         auto nodemap = m_pDevice->GetNodeMap();
 
@@ -243,17 +241,17 @@ void ArenaCameraNode::params_callback_(const camera_msg::msg::CameraSettings::Sh
             log_info("Gamma updated to " + std::to_string(msg->gamma));
         }
 
-        if ((msg->height > 0 && msg->height != height_) || (msg->width > 0 && msg->width != width_)) {
+        if ((msg->height > 0 && msg->height != height_) || (msg->width > 0 && msg->width != width_) || (!msg->pixelformat.empty() && msg->pixelformat != pixelformat_ros_)) {
             height_ = msg->height;
             width_ = msg->width;
-            set_nodes_roi_();
-            log_info("Height updated to " + std::to_string(msg->height));
-        }
-
-        if (!msg->pixelformat.empty() && msg->pixelformat != pixelformat_ros_) {
             pixelformat_ros_ = msg->pixelformat;
+            m_pDevice->StopStream();
+            set_nodes_roi_();
             set_nodes_pixelformat_();
+            log_info("Height updated to " + std::to_string(msg->height));
+            log_info("Width updated to " + std::to_string(msg->width));
             log_info("PixelFormat updated to " + msg->pixelformat);
+            m_pDevice->StartStream();
         }
 
     }
@@ -315,7 +313,7 @@ void ArenaCameraNode::run_()
 
 void ArenaCameraNode::publish_images_()
 {
-    std::cout << "publish_images_" << std::endl;
+    
   Arena::IImage* pImage = nullptr;
     if(!is_stream_started_){
         return;
@@ -328,8 +326,8 @@ void ArenaCameraNode::publish_images_()
       m_pub_->publish(std::move(p_image_msg));
 
 
-      log_info(std::string("image ") + std::to_string(pImage->GetFrameId()) +
-               " published to " + topic_);
+      // log_info(std::string("image ") + std::to_string(pImage->GetFrameId()) +
+      //          " published to " + topic_);
       this->m_pDevice->RequeueBuffer(pImage);
 
     } catch (std::exception& e) {
