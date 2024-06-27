@@ -6,8 +6,7 @@ from camera_msg.msg import CameraSettings
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
-path_to_camera_params = '/home/opszalek/arena_camera_ros2/ros2_ws/src/arena_camera_node/config/arena_camera_params.yaml'  #path to camera parameters in arena_camera_node
-
+path_to_camera_params = '.../arena_camera_node/config/arena_camera_params.yaml'  #path to camera parameters in arena_camera_node
 
 class CameraPublisher(Node):
     def __init__(self):
