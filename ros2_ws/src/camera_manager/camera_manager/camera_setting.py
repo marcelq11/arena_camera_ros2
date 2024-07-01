@@ -9,7 +9,7 @@ from ament_index_python.packages import get_package_share_directory
 
 qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
 path_to_camera_params = os.path.join(get_package_share_directory('arena_camera_node'), 'config', 'arena_camera_params.yaml')  #path to camera parameters in arena_camera_node
-
+#TODO: fix path to camera parameters in arena_camera_node because it takes it from install directory not from src directory
 class CameraPublisher(Node):
     def __init__(self):
         super().__init__('camera_publisher')

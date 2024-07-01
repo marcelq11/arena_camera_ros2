@@ -168,16 +168,26 @@ class CameraGUI:
 
     def handle_parameters(self):
         exposure, gamma, gain, width, height, pixel_format = self.get_parameters()
-        if exposure < 0:
-            exposure = 1.0
-        if gamma < 0:
-            gamma = 1.0
+        if exposure <= 50:
+            exposure = 50.0
+        elif exposure >= 47000:
+            exposure = 47000.0
+        if gamma <= 0.2:
+            gamma = 0.2
+        elif gamma >= 1.9:
+            gamma = 1.9
         if gain < 0:
             gain = 0.0
-        if width < 0:
+        elif gain >= 48:
+            gain = 48.0
+        if width <= 200:
             width = self.width
-        if height < 0:
+        elif width >= 2448:
+            width = 2448
+        if height <= 200:
             height = self.height
+        elif height >= 2048:
+            height = 2048
         self.exposure = exposure
         self.gamma = gamma
         self.gain = gain
