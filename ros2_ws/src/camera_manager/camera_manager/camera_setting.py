@@ -18,7 +18,7 @@ class CameraPublisher(Node):
                              error_func=self.raise_error, parameters_path=path_to_camera_params)  # Przekazanie callback
 
     def update_settings(self):
-        gain, exposure, gamma, pixel_format, width, height = self.gui.return_params()
+        gain, exposure, gamma, pixel_format, width, height, recording = self.gui.return_params()
         msg = CameraSettings()
         msg.exposure_time = exposure
         msg.gamma = gamma
@@ -26,6 +26,7 @@ class CameraPublisher(Node):
         msg.pixelformat = pixel_format
         msg.width = width
         msg.height = height
+        msg.recording = recording
         self.publisher_.publish(msg)
         self.get_logger().info(f'Publishing: {msg}')
 

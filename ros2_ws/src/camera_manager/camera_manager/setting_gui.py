@@ -14,6 +14,7 @@ class CameraGUI:
         self.gamma = 1.0
         self.width = 2448
         self.height = 2048
+        self.recording = False
 
         self.parameters_path = parameters_path
         self.error_callback = error_func
@@ -88,8 +89,27 @@ class CameraGUI:
         self.height_entry.config(width=7)
         self.height_entry.insert(0, str(self.height))
 
+        self.recording_button = tk.Button(self.root, text="Start Recording", command=self.toggle_recording)
+        self.recording_button.grid(row=4, column=1, columnspan=3)
+        self.recording_button.config(bg='green')
+        self.recording_button.config(activebackground=self.recording_button.cget('background'))
+
+
         tk.Button(self.root, text="Update Settings", command=update_callback).grid(row=4, column=4)
         self.update_entries()
+
+    def toggle_recording(self):
+        if self.recording:
+            self.recording = False
+            self.recording_button.config(text="Start Recording")
+            self.recording_button.config(bg='green')
+        else:
+            self.recording = True
+            self.recording_button.config(text="Stop Recording")
+            self.recording_button.config(bg='red')
+        self.recording_button.config(activebackground=self.recording_button.cget('background'))
+        self.update_callback()
+
 
     def load_parameters_from_file(self):
         if not os.path.exists(self.parameters_path):
@@ -211,4 +231,4 @@ class CameraGUI:
 
     def return_params(self):
         self.handle_parameters()
-        return self.gain, self.exposure, self.gamma, self.pixel_format, self.width, self.height
+        return self.gain, self.exposure, self.gamma, self.pixel_format, self.width, self.height, self.recording

@@ -4,3 +4,4 @@ float32 gain
 int32 width
 int32 height
 string pixelformat
+bool recording
