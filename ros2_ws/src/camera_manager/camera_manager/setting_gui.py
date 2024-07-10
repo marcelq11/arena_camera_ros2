@@ -14,7 +14,7 @@ class CameraGUI:
         self.gamma = 1.0
         self.width = 2448
         self.height = 2048
-        self.recording = False
+        self.recording = 0
 
         self.parameters_path = parameters_path
         self.error_callback = error_func
@@ -100,11 +100,11 @@ class CameraGUI:
 
     def toggle_recording(self):
         if self.recording:
-            self.recording = False
+            self.recording = 0
             self.recording_button.config(text="Start Recording")
             self.recording_button.config(bg='green')
         else:
-            self.recording = True
+            self.recording = 1
             self.recording_button.config(text="Stop Recording")
             self.recording_button.config(bg='red')
         self.recording_button.config(activebackground=self.recording_button.cget('background'))

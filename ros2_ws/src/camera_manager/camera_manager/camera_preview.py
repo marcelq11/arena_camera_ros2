@@ -22,7 +22,7 @@ class ImageSubscriber(Node):
     def image_callback(self, msg):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-            self.get_logger().info('Received an image!')
+            #self.get_logger().info('Received an image!')
             cv_image = cv2.resize(cv_image, (640, 640))
             cv2.imshow("Image", cv_image)
             cv2.waitKey(1)
