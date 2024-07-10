@@ -18,6 +18,8 @@ endif()
 
 # arenasdk find file dir
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")  # Adjust path as necessary
+find_package(FFmpeg REQUIRED)
 
 # finds dependencies
 find_package(ament_cmake REQUIRED)
@@ -65,7 +67,8 @@ target_include_directories(${trigger_image}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-
+include_directories(${FFMPEG_INCLUDE_DIRS})
+target_link_libraries(${target_name} ${FFMPEG_LIBRARIES})
 install(TARGETS
   ${trigger_image}
     DESTINATION lib/${PROJECT_NAME}

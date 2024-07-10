@@ -19,6 +19,7 @@
 #include "camera_msg/msg/camera_settings.hpp"
 // arena sdk
 #include "ArenaApi.h"
+#include "SaveApi.h"  
 
 class ArenaCameraNode : public rclcpp::Node
 {
@@ -47,6 +48,13 @@ class ArenaCameraNode : public rclcpp::Node
   bool is_device_created = false;
 
  private:
+//Recording variables
+  bool is_recording_;
+  std::unique_ptr<Save::VideoRecorder> video_recorder_;
+  Save::VideoParams video_params_;
+  void start_recording_();
+  void stop_recording_();
+
   rclcpp::TimerBase::SharedPtr m_publish_timer;
   std::shared_ptr<Arena::ISystem> m_pSystem;
   std::shared_ptr<Arena::IDevice> m_pDevice;

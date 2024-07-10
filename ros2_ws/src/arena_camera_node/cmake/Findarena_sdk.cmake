@@ -30,7 +30,8 @@ if(EXISTS ${_arena_sdk_conf})
 
 	set(arena_sdk_INCLUDE_DIRS
 		${arena_sdk_installation_root}/GenICam/library/CPP/include
-		${arena_sdk_installation_root}/include/Arena)
+		${arena_sdk_installation_root}/include/Arena
+		${arena_sdk_installation_root}/include/Save)
 	set (arena_sdk_INCLUDES ${arena_sdk_INCLUDE_DIRS})
 
 	#message(${_LOG_LVL_FRMT} "arena_sdk_INCLUDE_DIRS = ${arena_sdk_INCLUDE_DIRS}")

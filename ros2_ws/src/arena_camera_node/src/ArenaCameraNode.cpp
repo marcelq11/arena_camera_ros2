@@ -14,6 +14,10 @@
 
 //#include "arena_camera_node/msg/camera_settings.hpp"
 
+#define FRAMES_PER_SECOND 22.0
+#define WIDTH 2448  // image width
+#define HEIGHT 2048 // image height
+
 void ArenaCameraNode::parse_parameters_()
 {
   std::cout << "parse_parameters" << std::endl;
@@ -83,7 +87,7 @@ void ArenaCameraNode::parse_parameters_()
 
 void ArenaCameraNode::initialize_()
 {
-    std::cout << "initialize" << std::endl;
+  
   using namespace std::chrono_literals;
   // ARENASDK ---------------------------------------------------------------
   // Custom deleter for system
@@ -208,8 +212,15 @@ void ArenaCameraNode::initialize_()
   auto timer_callback = [this]() -> void {
         this->publish_images_();
     };
-    auto publish_interval = std::chrono::milliseconds(100); // Częstotliwość publikacji obrazów
+    auto publish_interval = std::chrono::milliseconds(50); // Częstotliwość publikacji obrazów
     m_publish_timer = this->create_wall_timer(publish_interval, timer_callback);
+  //Recording
+
+  video_params_ = Save::VideoParams(WIDTH, HEIGHT, FRAMES_PER_SECOND);  // Ensure WIDTH, HEIGHT, FRAMES_PER_SECOND are defined
+  video_recorder_ = std::make_unique<Save::VideoRecorder>(Save::VideoParams(WIDTH, HEIGHT, FRAMES_PER_SECOND), "output.mp4");
+  video_recorder_->SetH264Mp4BGR8(); 
+  is_recording_ = false; 
+
 }
 
 void ArenaCameraNode::params_callback_(const camera_msg::msg::CameraSettings::SharedPtr msg)
@@ -252,6 +263,11 @@ void ArenaCameraNode::params_callback_(const camera_msg::msg::CameraSettings::Sh
             log_info("Width updated to " + std::to_string(msg->width));
             log_info("PixelFormat updated to " + msg->pixelformat);
             m_pDevice->StartStream();
+        }
+        if (msg->recording == 1 && !is_recording_) {
+            start_recording_();
+        } else if (msg->recording == 0 && is_recording_) {
+            stop_recording_();
         }
 
     }
@@ -319,15 +335,19 @@ void ArenaCameraNode::publish_images_()
         return;
     }
     try {
+      log_info("publish_images_");
       auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
       pImage = m_pDevice->GetImage(1000);
       msg_form_image_(pImage, *p_image_msg);
-
+      if (is_recording_) {
+        Arena::IImage* convertedImage = Arena::ImageFactory::Convert(pImage, BGR8);
+        video_recorder_->AppendImage(convertedImage->GetData());
+        Arena::ImageFactory::Destroy(convertedImage);
+      }
+     
       m_pub_->publish(std::move(p_image_msg));
 
 
-      // log_info(std::string("image ") + std::to_string(pImage->GetFrameId()) +
-      //          " published to " + topic_);
       this->m_pDevice->RequeueBuffer(pImage);
 
     } catch (std::exception& e) {
@@ -674,3 +694,18 @@ std::cout << "set_nodes_test_pattern_image_" << std::endl;
   Arena::SetNodeValue<GenICam::gcstring>(nodemap, "TestPattern", "Pattern3");
 }
 
+
+void ArenaCameraNode::start_recording_()
+{
+  is_recording_ = true;
+  log_info("Recording started.");
+  video_recorder_->Open();
+
+}
+
+void ArenaCameraNode::stop_recording_()
+{  
+  is_recording_ = false;
+  log_info("Recording stopped.");
+  video_recorder_->Close();
+}
