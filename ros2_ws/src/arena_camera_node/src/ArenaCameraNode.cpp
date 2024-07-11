@@ -1,10 +1,9 @@
-#include <cstring>    // memcopy
+#include <cstring>  // memcopy
+#include <filesystem>
+#include <iostream>
+#include <regex>
 #include <stdexcept>  // std::runtime_err
 #include <string>
-#include <string>
-#include <iostream>
-#include <filesystem>
-#include <regex>
 namespace fs = std::filesystem;
 
 // ROS
@@ -12,32 +11,29 @@ namespace fs = std::filesystem;
 
 // ArenaSDK
 #include "ArenaCameraNode.h"
+#include "camera_msg/msg/camera_settings.hpp"
 #include "light_arena/deviceinfo_helper.h"
 #include "rclcpp_adapter/pixelformat_translation.h"
 #include "rclcpp_adapter/quilty_of_service_translation.cpp"
-#include "camera_msg/msg/camera_settings.hpp"
-
-//#include "arena_camera_node/msg/camera_settings.hpp"
 
 #define FRAMES_PER_SECOND 22.0
-#define WIDTH 2448  // image width
-#define HEIGHT 2048 // image height
+#define WIDTH 2448   // image width
+#define HEIGHT 2048  // image height
 
 void ArenaCameraNode::parse_parameters_()
 {
-  std::cout << "parse_parameters" << std::endl;
   std::string nextParameterToDeclare = "";
   try {
     nextParameterToDeclare = "serial";
     if (this->has_parameter("serial")) {
-        int serial_integer;
-        this->get_parameter<int>("serial", serial_integer);
-        serial_ = std::to_string(serial_integer);
-        is_passed_serial_ = true;
-} else {
-    serial_ = ""; // Set it to an empty string to indicate it's not passed.
-    is_passed_serial_ = false;
-}
+      int serial_integer;
+      this->get_parameter<int>("serial", serial_integer);
+      serial_ = std::to_string(serial_integer);
+      is_passed_serial_ = true;
+    } else {
+      serial_ = "";  // Set it to an empty string to indicate it's not passed.
+      is_passed_serial_ = false;
+    }
 
     nextParameterToDeclare = "pixelformat";
     pixelformat_ros_ = this->declare_parameter("pixelformat", "");
@@ -65,12 +61,10 @@ void ArenaCameraNode::parse_parameters_()
 
     nextParameterToDeclare = "trigger_mode";
     trigger_mode_activated_ = this->declare_parameter("trigger_mode", false);
-    // no need to is_passed_trigger_mode_ because it is already a boolean
 
     nextParameterToDeclare = "topic";
     topic_ = this->declare_parameter(
         "topic", std::string("/") + this->get_name() + "/images");
-    // no need to is_passed_topic_
 
     nextParameterToDeclare = "qos_history";
     pub_qos_history_ = this->declare_parameter("qos_history", "");
@@ -92,7 +86,6 @@ void ArenaCameraNode::parse_parameters_()
 
 void ArenaCameraNode::initialize_()
 {
-  
   using namespace std::chrono_literals;
   // ARENASDK ---------------------------------------------------------------
   // Custom deleter for system
@@ -160,10 +153,6 @@ void ArenaCameraNode::initialize_()
           K_CMDLN_PARAMETER_TO_QOS_HISTORY_POLICY[pub_qos_history_]);
     } else {
       log_err(pub_qos_history_ + " is not supported for this node");
-      // TODO
-      // should thorow instead??
-      // should this keeps shutting down if for some reasons this node is kept
-      // alive
       throw;
     }
   }
@@ -209,81 +198,77 @@ void ArenaCameraNode::initialize_()
                << '\n';
 
   log_info(pub_qos_info.str());
+
   // Create a subscriber for the /params topic
-  m_params_subscriber_ = this->create_subscription<camera_msg::msg::CameraSettings>(
-      "/params", 10, std::bind(&ArenaCameraNode::params_callback_, this, std::placeholders::_1));
+  m_params_subscriber_ =
+      this->create_subscription<camera_msg::msg::CameraSettings>(
+          "/params", 10,
+          std::bind(&ArenaCameraNode::params_callback_, this,
+                    std::placeholders::_1));
 
-  //petla do sub
-  auto timer_callback = [this]() -> void {
-        this->publish_images_();
-    };
-    auto publish_interval = std::chrono::milliseconds(50); // Częstotliwość publikacji obrazów
-    m_publish_timer = this->create_wall_timer(publish_interval, timer_callback);
-  //Recording
-  video_params_ = Save::VideoParams(WIDTH, HEIGHT, FRAMES_PER_SECOND);  // Ensure WIDTH, HEIGHT, FRAMES_PER_SECOND are defined
-  is_recording_ = false; 
+  // subciber loop
+  auto timer_callback = [this]() -> void { this->publish_images_(); };
+  auto publish_interval =
+      std::chrono::milliseconds(50);  // Frequency of publishing images
+  m_publish_timer = this->create_wall_timer(publish_interval, timer_callback);
+  // Recording
+  is_recording_ = false;
   folder_path_ = "videos";
-  int highest_number = get_video_name_(folder_path_);//TODO: add folder path
+  int highest_number = get_video_name_(folder_path_);
   video_num_ = highest_number + 1;
-
 }
 
-void ArenaCameraNode::params_callback_(const camera_msg::msg::CameraSettings::SharedPtr msg)
+void ArenaCameraNode::params_callback_(
+    const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
-    if (!msg) {
-    std::cerr << "Received a null message pointer in params_callback_." << std::endl;
+  if (!msg) {
     return;
-    }
-    if (is_device_created == true){
-        auto nodemap = m_pDevice->GetNodeMap();
+  }
+  if (is_device_created == true) {
+    auto nodemap = m_pDevice->GetNodeMap();
 
-        if ((msg->exposure_time >= 0.0) && (msg->exposure_time != exposure_time_)) {
-            std::cout << "deb2" << std::endl;
-            exposure_time_ = msg->exposure_time;
-            set_nodes_exposure_();
-            std::cout << "deb3" << std::endl;
-            log_info("ExposureTime updated to " + std::to_string(msg->exposure_time));
-        }
-
-        if (msg->gain >= 0.0f && msg->gain != gain_) {
-            gain_ = msg->gain;
-            set_nodes_gain_();
-            log_info("Gain updated to " + std::to_string(msg->gain));
-        }
-
-        if (msg->gamma >= 0.0f && msg->gamma != gamma_) {
-            gamma_ = msg->gamma;
-            set_nodes_gamma_();
-            log_info("Gamma updated to " + std::to_string(msg->gamma));
-        }
-
-        if ((msg->height > 0 && msg->height != height_) || (msg->width > 0 && msg->width != width_) || (!msg->pixelformat.empty() && msg->pixelformat != pixelformat_ros_)) {
-            height_ = msg->height;
-            width_ = msg->width;
-            pixelformat_ros_ = msg->pixelformat;
-            m_pDevice->StopStream();
-            set_nodes_roi_();
-            set_nodes_pixelformat_();
-            log_info("Height updated to " + std::to_string(msg->height));
-            log_info("Width updated to " + std::to_string(msg->width));
-            log_info("PixelFormat updated to " + msg->pixelformat);
-            m_pDevice->StartStream();
-        }
-        if (msg->recording == 1 && !is_recording_) {
-            start_recording_();
-        } else if (msg->recording == 0 && is_recording_) {
-            stop_recording_();
-        }
-
+    if ((msg->exposure_time >= 0.0) && (msg->exposure_time != exposure_time_)) {
+      exposure_time_ = msg->exposure_time;
+      set_nodes_exposure_();
+      log_info("ExposureTime updated to " + std::to_string(msg->exposure_time));
     }
 
+    if (msg->gain >= 0.0f && msg->gain != gain_) {
+      gain_ = msg->gain;
+      set_nodes_gain_();
+      log_info("Gain updated to " + std::to_string(msg->gain));
+    }
 
+    if (msg->gamma >= 0.0f && msg->gamma != gamma_) {
+      gamma_ = msg->gamma;
+      set_nodes_gamma_();
+      log_info("Gamma updated to " + std::to_string(msg->gamma));
+    }
 
+    if ((msg->height > 0 && msg->height != height_) ||
+        (msg->width > 0 && msg->width != width_) ||
+        (!msg->pixelformat.empty() && msg->pixelformat != pixelformat_ros_)) {
+      height_ = msg->height;
+      width_ = msg->width;
+      pixelformat_ros_ = msg->pixelformat;
+      m_pDevice->StopStream();
+      set_nodes_roi_();
+      set_nodes_pixelformat_();
+      log_info("Height updated to " + std::to_string(msg->height));
+      log_info("Width updated to " + std::to_string(msg->width));
+      log_info("PixelFormat updated to " + msg->pixelformat);
+      m_pDevice->StartStream();
+    }
+    if (msg->recording == 1 && !is_recording_) {
+      start_recording_();
+    } else if (msg->recording == 0 && is_recording_) {
+      stop_recording_();
+    }
+  }
 }
 
 void ArenaCameraNode::wait_for_device_timer_callback_()
 {
-    std::cout << "wait_for_device_timer_callback_" << std::endl;
   // something happend while checking for cameras
   if (!rclcpp::ok()) {
     log_err("Interrupted while waiting for arena camera. Exiting.");
@@ -305,70 +290,61 @@ void ArenaCameraNode::wait_for_device_timer_callback_()
              " arena device(s) has been discoved.");
     run_();
   }
-
 }
 
 void ArenaCameraNode::run_()
 {
-  std::cout << "run_" << std::endl;
   auto device = create_device_ros_();
   m_pDevice.reset(device);
   is_device_created = true;
 
   set_nodes_();
 
-
-
-  std::cout << "startstream" << std::endl;
   m_pDevice->StartStream();
   is_stream_started_ = true;
-//
-//  if (!trigger_mode_activated_) {
-//    publish_images_();
-//  } else {
-//    // else ros::spin will
-//  }
-
-
+  //
+  //  if (!trigger_mode_activated_) {
+  //    publish_images_();
+  //  } else {
+  //    // else ros::spin will
+  //  }
 }
 
 void ArenaCameraNode::publish_images_()
 {
-    
   Arena::IImage* pImage = nullptr;
-    if(!is_stream_started_){
-        return;
+  if (!is_stream_started_) {
+    return;
+  }
+  try {
+    log_info("publish_images_");
+    auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
+    pImage = m_pDevice->GetImage(1000);
+    msg_form_image_(pImage, *p_image_msg);
+    if (is_recording_) {
+      Arena::IImage* convertedImage =
+          Arena::ImageFactory::Convert(pImage, BGR8);
+      video_recorder_->AppendImage(convertedImage->GetData());
+      Arena::ImageFactory::Destroy(convertedImage);
     }
-    try {
-      log_info("publish_images_");
-      auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
-      pImage = m_pDevice->GetImage(1000);
-      msg_form_image_(pImage, *p_image_msg);
-      if (is_recording_) {
-        Arena::IImage* convertedImage = Arena::ImageFactory::Convert(pImage, BGR8);
-        video_recorder_->AppendImage(convertedImage->GetData());
-        Arena::ImageFactory::Destroy(convertedImage);
-      }
-     
-      m_pub_->publish(std::move(p_image_msg));
 
+    m_pub_->publish(std::move(p_image_msg));
 
+    this->m_pDevice->RequeueBuffer(pImage);
+
+  } catch (std::exception& e) {
+    if (pImage) {
       this->m_pDevice->RequeueBuffer(pImage);
-
-    } catch (std::exception& e) {
-      if (pImage) {
-        this->m_pDevice->RequeueBuffer(pImage);
-        pImage = nullptr;
-        log_warn(std::string("Exception occurred while publishing an image\n") +
-                 e.what());
-      }
+      pImage = nullptr;
+      log_warn(std::string("Exception occurred while publishing an image\n") +
+               e.what());
     }
+  }
 }
 
 void ArenaCameraNode::msg_form_image_(Arena::IImage* pImage,
                                       sensor_msgs::msg::Image& image_msg)
 {
-    std::cout << "msg_form_image_" << std::endl;
   try {
     // 1 ) Header
     //      - stamp.sec
@@ -430,7 +406,6 @@ void ArenaCameraNode::publish_an_image_on_trigger_(
     std::shared_ptr<std_srvs::srv::Trigger::Request> request /*unused*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
-    std::cout << "publish_an_image_on_trigger_" << std::endl;
   if (!trigger_mode_activated_) {
     std::string msg =
         "Failed to trigger image because the device is not in trigger mode."
@@ -507,7 +482,6 @@ void ArenaCameraNode::publish_an_image_on_trigger_(
 
 Arena::IDevice* ArenaCameraNode::create_device_ros_()
 {
-    std::cout << "create_device_ros_" << std::endl;
   m_pSystem->UpdateDevices(100);  // in millisec
   auto device_infos = m_pSystem->GetDevices();
   if (!device_infos.size()) {
@@ -529,7 +503,6 @@ Arena::IDevice* ArenaCameraNode::create_device_ros_()
 
 void ArenaCameraNode::set_nodes_()
 {
-    std::cout << "set_nodes" << std::endl;
   set_nodes_load_default_profile_();
   set_nodes_roi_();
   set_nodes_gain_();
@@ -538,18 +511,20 @@ void ArenaCameraNode::set_nodes_()
   set_nodes_exposure_();
   set_nodes_trigger_mode_();
 
+  Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(),
+                                         "AcquisitionMode", "Continuous");
+  // Arena::SetNodeValue<bool>(m_pDevice->GetNodeMap(),
+  // "AcquisitionFrameRateEnable", true);
+  // Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(),
+  // "StreamAutoNegotiatePacketSize", true);
+  // Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(),
+  // "StreamPacketResendEnable", true);
 
-  Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(), "AcquisitionMode", "Continuous");
-// Arena::SetNodeValue<bool>(m_pDevice->GetNodeMap(), "AcquisitionFrameRateEnable", true);
-  //Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamAutoNegotiatePacketSize", true);
-  //Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamPacketResendEnable", true);
-
-  //set_nodes_test_pattern_image_();
+  // set_nodes_test_pattern_image_();
 }
 
 void ArenaCameraNode::set_nodes_load_default_profile_()
 {
-    std::cout << "set_nodes_load_default_profile_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
 
   // device run on default profile all the time if no args are passed
@@ -562,7 +537,6 @@ void ArenaCameraNode::set_nodes_load_default_profile_()
 
 void ArenaCameraNode::set_nodes_roi_()
 {
-    std::cout << "set_nodes_roi_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
 
   // Width -------------------------------------------------
@@ -586,7 +560,6 @@ void ArenaCameraNode::set_nodes_roi_()
 
 void ArenaCameraNode::set_nodes_gain_()
 {
-std::cout << "set_nodes_gain_" << std::endl;
   if (is_passed_gain_) {  // not default
     auto nodemap = m_pDevice->GetNodeMap();
     Arena::SetNodeValue<double>(nodemap, "Gain", gain_);
@@ -596,7 +569,6 @@ std::cout << "set_nodes_gain_" << std::endl;
 
 void ArenaCameraNode::set_nodes_gamma_()
 {
-std::cout << "set_nodes_gamma_" << std::endl;
   if (is_passed_gamma_) {  // not default
     auto nodemap = m_pDevice->GetNodeMap();
     Arena::SetNodeValue<double>(nodemap, "Gamma", gamma_);
@@ -606,7 +578,6 @@ std::cout << "set_nodes_gamma_" << std::endl;
 
 void ArenaCameraNode::set_nodes_pixelformat_()
 {
-std::cout << "set_nodes_pixelformat_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
   // TODO ---------------------------------------------------------------------
   // PIXEL FORMAT HANDLEING
@@ -638,15 +609,12 @@ std::cout << "set_nodes_pixelformat_" << std::endl;
       log_warn(
           "the device current pixelfromat value is not supported by ROS2. "
           "please use --ros-args -p pixelformat:=\"<supported pixelformat>\".");
-      // TODO
-      // print list of supported pixelformats
     }
   }
 }
 
 void ArenaCameraNode::set_nodes_exposure_()
 {
-std::cout << "set_nodes_exposure_" << std::endl;
   if (is_passed_exposure_time_) {
     auto nodemap = m_pDevice->GetNodeMap();
     Arena::SetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto", "Off");
@@ -656,7 +624,6 @@ std::cout << "set_nodes_exposure_" << std::endl;
 
 void ArenaCameraNode::set_nodes_trigger_mode_()
 {
-std::cout << "set_nodes_trigger_mode_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
   if (trigger_mode_activated_) {
     if (exposure_time_ < 0) {
@@ -692,55 +659,52 @@ std::cout << "set_nodes_trigger_mode_" << std::endl;
   }
 }
 
-// just for debugging
 void ArenaCameraNode::set_nodes_test_pattern_image_()
 {
-std::cout << "set_nodes_test_pattern_image_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
   Arena::SetNodeValue<GenICam::gcstring>(nodemap, "TestPattern", "Pattern3");
 }
 int ArenaCameraNode::get_video_name_(std::string& folder_path)
-{  
+{
   if (!fs::exists(folder_path)) {
-        fs::create_directory(folder_path);
+    fs::create_directory(folder_path);
+  }
+
+  std::regex pattern("output(\\d+)\\.mp4");
+  std::optional<int> max_number;
+
+  for (const auto& entry : fs::directory_iterator(folder_path)) {
+    std::smatch matches;
+    std::string filename = entry.path().filename().string();
+
+    if (std::regex_match(filename, matches, pattern)) {
+      int number = std::stoi(matches[1].str());
+      if (!max_number.has_value() || number > max_number) {
+        max_number = number;
+      }
     }
-
-    std::regex pattern("output(\\d+)\\.mp4");  // Pattern to match filenames
-    std::optional<int> max_number;             // Optional to store the highest number
-
-    for (const auto& entry : fs::directory_iterator(folder_path)) {
-        std::smatch matches;                  // To store matches found by regex
-        std::string filename = entry.path().filename().string();
-
-        // Check if the filename matches the regex pattern
-        if (std::regex_match(filename, matches, pattern)) {
-            int number = std::stoi(matches[1].str());  // Extract the number and convert to int
-            if (!max_number.has_value() || number > max_number) {
-                max_number = number;  // Update max_number if this number is greater
-            }
-        }
-    }
-
-    // Return the maximum number found or 0 if no such file exists
-    return max_number.value_or(0);
-  
+  }
+  return max_number.value_or(0);
 }
 
 void ArenaCameraNode::start_recording_()
-{ //ADD if only recording is not started already
+{  // ADD if only recording is not started already
   if (!is_recording_) {
+    video_params_ = Save::VideoParams(WIDTH, HEIGHT, FRAMES_PER_SECOND);
     is_recording_ = true;
     log_info("Recording started.");
-    std::string video_name = folder_path_ + "/" + "output" + std::to_string(video_num_) + ".mp4";
-    video_recorder_ = std::make_unique<Save::VideoRecorder>(Save::VideoParams(WIDTH, HEIGHT, FRAMES_PER_SECOND), video_name.c_str());
-    video_recorder_->SetH264Mp4BGR8(); 
+    std::string video_name =
+        folder_path_ + "/" + "output" + std::to_string(video_num_) + ".mp4";
+    video_recorder_ = std::make_unique<Save::VideoRecorder>(
+        Save::VideoParams(width_, height_, FRAMES_PER_SECOND),
+        video_name.c_str());
+    video_recorder_->SetH264Mp4BGR8();
     video_recorder_->Open();
   }
-
 }
 
 void ArenaCameraNode::stop_recording_()
-{  
+{
   is_recording_ = false;
   log_info("Recording stopped.");
   video_recorder_->Close();
