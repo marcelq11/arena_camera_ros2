@@ -1,6 +1,11 @@
 #include <cstring>    // memcopy
 #include <stdexcept>  // std::runtime_err
 #include <string>
+#include <string>
+#include <iostream>
+#include <filesystem>
+#include <regex>
+namespace fs = std::filesystem;
 
 // ROS
 #include "rmw/types.h"
@@ -215,11 +220,11 @@ void ArenaCameraNode::initialize_()
     auto publish_interval = std::chrono::milliseconds(50); // Częstotliwość publikacji obrazów
     m_publish_timer = this->create_wall_timer(publish_interval, timer_callback);
   //Recording
-
   video_params_ = Save::VideoParams(WIDTH, HEIGHT, FRAMES_PER_SECOND);  // Ensure WIDTH, HEIGHT, FRAMES_PER_SECOND are defined
-  video_recorder_ = std::make_unique<Save::VideoRecorder>(Save::VideoParams(WIDTH, HEIGHT, FRAMES_PER_SECOND), "output.mp4");
-  video_recorder_->SetH264Mp4BGR8(); 
   is_recording_ = false; 
+  folder_path_ = "videos";
+  int highest_number = get_video_name_(folder_path_);//TODO: add folder path
+  video_num_ = highest_number + 1;
 
 }
 
@@ -534,9 +539,10 @@ void ArenaCameraNode::set_nodes_()
   set_nodes_trigger_mode_();
 
 
-  // configure Auto Negotiate Packet Size and Packet Resend
-//  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamAutoNegotiatePacketSize", True);
-//  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamPacketResendEnable", True);
+  Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(), "AcquisitionMode", "Continuous");
+// Arena::SetNodeValue<bool>(m_pDevice->GetNodeMap(), "AcquisitionFrameRateEnable", true);
+  //Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamAutoNegotiatePacketSize", true);
+  //Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamPacketResendEnable", true);
 
   //set_nodes_test_pattern_image_();
 }
@@ -693,13 +699,43 @@ std::cout << "set_nodes_test_pattern_image_" << std::endl;
   auto nodemap = m_pDevice->GetNodeMap();
   Arena::SetNodeValue<GenICam::gcstring>(nodemap, "TestPattern", "Pattern3");
 }
+int ArenaCameraNode::get_video_name_(std::string& folder_path)
+{  
+  if (!fs::exists(folder_path)) {
+        fs::create_directory(folder_path);
+    }
 
+    std::regex pattern("output(\\d+)\\.mp4");  // Pattern to match filenames
+    std::optional<int> max_number;             // Optional to store the highest number
+
+    for (const auto& entry : fs::directory_iterator(folder_path)) {
+        std::smatch matches;                  // To store matches found by regex
+        std::string filename = entry.path().filename().string();
+
+        // Check if the filename matches the regex pattern
+        if (std::regex_match(filename, matches, pattern)) {
+            int number = std::stoi(matches[1].str());  // Extract the number and convert to int
+            if (!max_number.has_value() || number > max_number) {
+                max_number = number;  // Update max_number if this number is greater
+            }
+        }
+    }
+
+    // Return the maximum number found or 0 if no such file exists
+    return max_number.value_or(0);
+  
+}
 
 void ArenaCameraNode::start_recording_()
-{
-  is_recording_ = true;
-  log_info("Recording started.");
-  video_recorder_->Open();
+{ //ADD if only recording is not started already
+  if (!is_recording_) {
+    is_recording_ = true;
+    log_info("Recording started.");
+    std::string video_name = folder_path_ + "/" + "output" + std::to_string(video_num_) + ".mp4";
+    video_recorder_ = std::make_unique<Save::VideoRecorder>(Save::VideoParams(WIDTH, HEIGHT, FRAMES_PER_SECOND), video_name.c_str());
+    video_recorder_->SetH264Mp4BGR8(); 
+    video_recorder_->Open();
+  }
 
 }
 
@@ -708,4 +744,6 @@ void ArenaCameraNode::stop_recording_()
   is_recording_ = false;
   log_info("Recording stopped.");
   video_recorder_->Close();
+  video_recorder_.reset();
+  video_num_++;
 }

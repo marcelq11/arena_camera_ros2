@@ -54,6 +54,10 @@ class ArenaCameraNode : public rclcpp::Node
   Save::VideoParams video_params_;
   void start_recording_();
   void stop_recording_();
+  int get_video_name_(std::string& folder_name);
+  int video_num_;
+  std::string video_name_;
+  std::string folder_path_;
 
   rclcpp::TimerBase::SharedPtr m_publish_timer;
   std::shared_ptr<Arena::ISystem> m_pSystem;
