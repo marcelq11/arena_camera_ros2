@@ -661,6 +661,7 @@ void ArenaCameraNode::set_nodes_trigger_mode_()
 
 void ArenaCameraNode::set_nodes_test_pattern_image_()
 {
+  //TODO Delete
   auto nodemap = m_pDevice->GetNodeMap();
   Arena::SetNodeValue<GenICam::gcstring>(nodemap, "TestPattern", "Pattern3");
 }
@@ -690,14 +691,12 @@ int ArenaCameraNode::get_video_name_(std::string& folder_path)
 void ArenaCameraNode::start_recording_()
 {  // ADD if only recording is not started already
   if (!is_recording_) {
-    video_params_ = Save::VideoParams(WIDTH, HEIGHT, FRAMES_PER_SECOND);
+    video_params_ = Save::VideoParams(width_, height_, FRAMES_PER_SECOND);
     is_recording_ = true;
     log_info("Recording started.");
     std::string video_name =
         folder_path_ + "/" + "output" + std::to_string(video_num_) + ".mp4";
-    video_recorder_ = std::make_unique<Save::VideoRecorder>(
-        Save::VideoParams(width_, height_, FRAMES_PER_SECOND),
-        video_name.c_str());
+    video_recorder_ = std::make_unique<Save::VideoRecorder>(video_params_, video_name.c_str());
     video_recorder_->SetH264Mp4BGR8();
     video_recorder_->Open();
   }
