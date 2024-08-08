@@ -7,7 +7,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 import cv2
 
 # Import the class from image_main.py
-from Distance_Sign_Recognition.image_processing.image_main import SignTextRecognitionSystem
+from image_processing.image_main import SignTextRecognitionSystem
 
 qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
 

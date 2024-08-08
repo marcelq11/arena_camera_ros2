@@ -18,7 +18,7 @@ def generate_launch_description():
     sign_recognition_node_launch_dir = os.path.join(get_package_share_directory('sign_recognition_node'),
                                                 'launch',
                                                 'sign_recognition_node.launch.py')
-    sign_recognition_node = IncludeLaunchDescription(PythonLaunchDescriptionSource(sign_recognition_node))
+    sign_recognition_node = IncludeLaunchDescription(PythonLaunchDescriptionSource(sign_recognition_node_launch_dir))
 
     return LaunchDescription([
         arena_camera_node,
