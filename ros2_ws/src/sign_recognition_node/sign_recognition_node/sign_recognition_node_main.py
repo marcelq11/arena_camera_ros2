@@ -5,8 +5,8 @@ from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 import cv2
+import os
 
-# Import the class from image_main.py
 from image_processing.image_main import SignTextRecognitionSystem
 
 qos_profile = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
@@ -17,7 +17,10 @@ class SignTextRecognitionNode(Node):
 
         self.bridge = CvBridge()
 
+        models_path = os.environ.get('MODELS_PATH')
+
         self.sign_text_recognition_system = SignTextRecognitionSystem(
+            models_path=models_path,
             model='yolov8',
             save_results=True,
             show_signs=True,
