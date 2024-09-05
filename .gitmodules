@@ -1,3 +1,4 @@
 [submodule "ros2_ws/src/sign_recognition_node/sign_recognition_node/Distance_Sign_Recognition"]
 	path = ros2_ws/src/sign_recognition_node/sign_recognition_node/Distance_Sign_Recognition
 	url = https://github.com/Opszalek/Distance_Sign_Recognition.git
+	branch = main
