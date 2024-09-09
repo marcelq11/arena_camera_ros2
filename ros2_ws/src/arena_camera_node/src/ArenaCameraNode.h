@@ -116,14 +116,13 @@ class ArenaCameraNode : public rclcpp::Node
   // - handle misconfigured device
   Arena::IDevice* create_device_ros_();
   void set_nodes_();
-  void set_nodes_load_default_profile_();
+  void set_nodes_load_profile_();
   void set_nodes_roi_();
   void set_nodes_gain_();
   void set_nodes_gamma_();
   void set_nodes_pixelformat_();
   void set_nodes_exposure_();
   void set_nodes_trigger_mode_();
-  void set_nodes_test_pattern_image_();
   void publish_images_();
 
   void publish_an_image_on_trigger_(

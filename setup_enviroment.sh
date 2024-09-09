@@ -16,7 +16,7 @@ export PYTHONPATH="$PYTHONPATH:$DEST_DIR/utils"
 
 cd "$DEST_DIR/Models"
 
-bash download_models.sh
+#bash download_models.sh
 
 cd $BASE_DIR
 
@@ -31,3 +31,5 @@ colcon build || { echo "Colcon build failed"; exit 1; }
 source install/setup.bash || { echo "Problem with sourcing install"; exit 1; }
 
 echo $PYTHONPATH
+
+ros2 launch camera_launch camera_launch.launch.py

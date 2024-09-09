@@ -17,8 +17,6 @@ namespace fs = std::filesystem;
 #include "rclcpp_adapter/quilty_of_service_translation.cpp"
 
 #define FRAMES_PER_SECOND 22.0
-#define WIDTH 2448   // image width
-#define HEIGHT 2048  // image height
 
 void ArenaCameraNode::parse_parameters_()
 {
@@ -221,6 +219,7 @@ void ArenaCameraNode::initialize_()
 void ArenaCameraNode::params_callback_(
     const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
+    //TODO: add limits to the auto exposure time and gain
   if (!msg) {
     return;
   }
@@ -312,6 +311,7 @@ void ArenaCameraNode::run_()
 
 void ArenaCameraNode::publish_images_()
 {
+
   Arena::IImage* pImage = nullptr;
   if (!is_stream_started_) {
     return;
@@ -503,36 +503,18 @@ Arena::IDevice* ArenaCameraNode::create_device_ros_()
 
 void ArenaCameraNode::set_nodes_()
 {
-  set_nodes_load_default_profile_();
-  set_nodes_roi_();
-  set_nodes_gain_();
-  set_nodes_gamma_();
-  set_nodes_pixelformat_();
-  set_nodes_exposure_();
-  set_nodes_trigger_mode_();
-
-  Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(),
-                                         "AcquisitionMode", "Continuous");
-  // Arena::SetNodeValue<bool>(m_pDevice->GetNodeMap(),
-  // "AcquisitionFrameRateEnable", true);
-  // Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(),
-  // "StreamAutoNegotiatePacketSize", true);
-  // Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(),
-  // "StreamPacketResendEnable", true);
-
-  // set_nodes_test_pattern_image_();
+  Arena::FeatureStream featureStreamDst(m_pDevice->GetNodeMap());
+  featureStreamDst.Read("features.txt");
+  log_info("Features loaded");
+  set_nodes_load_profile_();
 }
 
-void ArenaCameraNode::set_nodes_load_default_profile_()
+void ArenaCameraNode::set_nodes_load_profile_()
 {
   auto nodemap = m_pDevice->GetNodeMap();
-
-  // device run on default profile all the time if no args are passed
-  // otherwise, overwise only these params
-  Arena::SetNodeValue<GenICam::gcstring>(nodemap, "UserSetSelector", "Default");
-  // execute the profile
+  Arena::SetNodeValue<GenICam::gcstring>(nodemap, "UserSetSelector", "UserSet1");
   Arena::ExecuteNode(nodemap, "UserSetLoad");
-  log_info("\tdefault profile is loaded");
+  log_info("\tUserSet1 profile is loaded");
 }
 
 void ArenaCameraNode::set_nodes_roi_()
@@ -659,12 +641,6 @@ void ArenaCameraNode::set_nodes_trigger_mode_()
   }
 }
 
-void ArenaCameraNode::set_nodes_test_pattern_image_()
-{
-  //TODO Delete
-  auto nodemap = m_pDevice->GetNodeMap();
-  Arena::SetNodeValue<GenICam::gcstring>(nodemap, "TestPattern", "Pattern3");
-}
 int ArenaCameraNode::get_video_name_(std::string& folder_path)
 {
   if (!fs::exists(folder_path)) {
