@@ -1,11 +1,12 @@
 arena_camera_node:
   ros__parameters:
     topic: /image
-    width: 2448
+    width: 2048
     height: 2048
     pixelformat: bayer_rggb8
     gain: 15.0
     gamma: 1.0
     exposure_time: 2000.0
     qos_reliability: reliable
+    qos_history_depth: 20
     trigger_mode: false
