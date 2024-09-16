@@ -24,7 +24,7 @@
 class ArenaCameraNode : public rclcpp::Node
 {
  public:
-  ArenaCameraNode() : Node("arena_camera_node")
+  ArenaCameraNode() : Node("arena_camera_node"), previous_time_(std::chrono::steady_clock::now())//for FPS calculation
   {
     // set stdout buffer size for ROS defined size BUFSIZE
     setvbuf(stdout, NULL, _IONBF, BUFSIZ);
@@ -48,6 +48,7 @@ class ArenaCameraNode : public rclcpp::Node
   bool is_device_created = false;
 
  private:
+ std::chrono::steady_clock::time_point previous_time_;//for FPS calculation
 //Recording variables
   bool is_recording_;
   std::unique_ptr<Save::VideoRecorder> video_recorder_;

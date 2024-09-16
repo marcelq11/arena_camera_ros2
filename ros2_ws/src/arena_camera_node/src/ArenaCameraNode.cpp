@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 #include "rclcpp_adapter/pixelformat_translation.h"
 #include "rclcpp_adapter/quilty_of_service_translation.cpp"
 
-#define FRAMES_PER_SECOND 22.0
+#define FRAMES_PER_SECOND 28.0
 
 void ArenaCameraNode::parse_parameters_()
 {
@@ -178,6 +178,9 @@ void ArenaCameraNode::initialize_()
   // rmw_qos_history_policy_t;
   // auto pub_qos_init = rclcpp::QoSInitialization(history_policy_, );
 
+
+  int64_t depth_1 = 100;
+  pub_qos_.keep_last(depth_1);
   m_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
       this->get_parameter("topic").as_string(), pub_qos_);
 
@@ -207,7 +210,7 @@ void ArenaCameraNode::initialize_()
   // subciber loop
   auto timer_callback = [this]() -> void { this->publish_images_(); };
   auto publish_interval =
-      std::chrono::milliseconds(50);  // Frequency of publishing images
+      std::chrono::milliseconds(25);  // Frequency of publishing images
   m_publish_timer = this->create_wall_timer(publish_interval, timer_callback);
   // Recording
   is_recording_ = false;
@@ -317,7 +320,12 @@ void ArenaCameraNode::publish_images_()
     return;
   }
   try {
-    log_info("publish_images_");
+    //log_info("publish_images_");
+    // auto nodemap = m_pDevice->GetNodeMap();
+    // auto Width_check = Arena::GetNodeValue<int64_t>(nodemap, "Width");
+    // auto Height_check = Arena::GetNodeValue<int64_t>(nodemap, "Height");
+    // RCLCPP_INFO(this->get_logger(), "Width ARENA CAMERA: %ld", Width_check);
+    // RCLCPP_INFO(this->get_logger(), "Height ARENA CAMERA: %ld", Height_check);
     auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
     pImage = m_pDevice->GetImage(1000);
     msg_form_image_(pImage, *p_image_msg);
@@ -331,6 +339,16 @@ void ArenaCameraNode::publish_images_()
     m_pub_->publish(std::move(p_image_msg));
 
     this->m_pDevice->RequeueBuffer(pImage);
+
+    // Calculate and log FPS
+    auto current_time = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = current_time - previous_time_;
+    if (elapsed_seconds.count() > 0) {
+        double fps = 1.0 / elapsed_seconds.count();
+        //RCLCPP_INFO(this->get_logger(), "FPS ARENA CAMERA: %f", fps);
+    }
+
+    previous_time_ = current_time;
 
   } catch (std::exception& e) {
     if (pImage) {
@@ -507,6 +525,21 @@ void ArenaCameraNode::set_nodes_()
   featureStreamDst.Read("features.txt");
   log_info("Features loaded");
   set_nodes_load_profile_();
+  set_nodes_roi_();
+  Arena::SetNodeValue<bool>(m_pDevice->GetNodeMap(), "AcquisitionFrameRateEnable", true);
+
+  double desired_fps = 24.0;
+  Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "AcquisitionFrameRate", desired_fps);
+
+  auto pNodeMap = m_pDevice->GetNodeMap();
+  GenApi::CFloatPtr pFloat = pNodeMap->GetNode("AcquisitionFrameRate");
+  pFloat->SetValue(desired_fps);
+
+  // int64_t width_new = 2048;
+  // int64_t height_new = 2048;
+  // auto nodemap = m_pDevice->GetNodeMap();
+  // Arena::SetNodeValue<int64_t>(nodemap, "Width", width_new);
+  // Arena::SetNodeValue<int64_t>(nodemap, "Height", height_new);
 }
 
 void ArenaCameraNode::set_nodes_load_profile_()
