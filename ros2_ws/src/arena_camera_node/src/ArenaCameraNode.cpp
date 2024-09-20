@@ -45,18 +45,6 @@ void ArenaCameraNode::parse_parameters_()
     height_ = this->declare_parameter("height", 0);
     is_passed_height = height_ > 0;
 
-    nextParameterToDeclare = "gain";
-    gain_ = this->declare_parameter("gain", -1.0);
-    is_passed_gain_ = gain_ >= 0;
-
-    nextParameterToDeclare = "gamma";
-    gamma_ = this->declare_parameter("gamma", 1.0);
-    is_passed_gamma_ = gamma_ >= 0;
-
-    nextParameterToDeclare = "exposure_time";
-    exposure_time_ = this->declare_parameter("exposure_time", -1.0);
-    is_passed_exposure_time_ = exposure_time_ >= 0;
-
     nextParameterToDeclare = "trigger_mode";
     trigger_mode_activated_ = this->declare_parameter("trigger_mode", false);
 
@@ -222,45 +210,90 @@ void ArenaCameraNode::initialize_()
 void ArenaCameraNode::params_callback_(
     const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
-    //TODO: add limits to the auto exposure time and gain
   if (!msg) {
     return;
   }
   if (is_device_created == true) {
+    get_nodes_values_();
+
     auto nodemap = m_pDevice->GetNodeMap();
 
-    if ((msg->exposure_time >= 0.0) && (msg->exposure_time != exposure_time_)) {
-      exposure_time_ = msg->exposure_time;
-      set_nodes_exposure_();
-      log_info("ExposureTime updated to " + std::to_string(msg->exposure_time));
-    }
+    brightness_ = msg->target_brightness;
+    exposure_time_lower_limit_ = msg->exposure_time_lower_limit;
+    exposure_time_upper_limit_ = msg->exposure_time_upper_limit;
+    gain_lower_limit_ = msg->gain_lower_limit;
+    gain_upper_limit_ = msg->gain_upper_limit;
+    width_aoi_exposure_ = msg->roi_width;
+    height_aoi_exposure_ = msg->roi_height;
+    offset_x_aoi_exposure_ = msg->roi_offset_x;
+    offset_y_aoi_exposure_ = msg->roi_offset_y;
+    width_ = msg->width;
+    height_ = msg->height;
 
-    if (msg->gain >= 0.0f && msg->gain != gain_) {
-      gain_ = msg->gain;
-      set_nodes_gain_();
-      log_info("Gain updated to " + std::to_string(msg->gain));
-    }
 
-    if (msg->gamma >= 0.0f && msg->gamma != gamma_) {
-      gamma_ = msg->gamma;
-      set_nodes_gamma_();
-      log_info("Gamma updated to " + std::to_string(msg->gamma));
-    }
+    set_brightness_node_();
+    set_exposure_node_limits_();
+    set_exposure_aoi_node_();
+    set_awb_aoi_node_();
+    set_gain_node_limits_();
 
-    if ((msg->height > 0 && msg->height != height_) ||
-        (msg->width > 0 && msg->width != width_) ||
-        (!msg->pixelformat.empty() && msg->pixelformat != pixelformat_ros_)) {
-      height_ = msg->height;
-      width_ = msg->width;
-      pixelformat_ros_ = msg->pixelformat;
-      m_pDevice->StopStream();
-      set_nodes_roi_();
-      set_nodes_pixelformat_();
-      log_info("Height updated to " + std::to_string(msg->height));
-      log_info("Width updated to " + std::to_string(msg->width));
-      log_info("PixelFormat updated to " + msg->pixelformat);
-      m_pDevice->StartStream();
-    }
+
+//    if (msg->exposure_time_upper_limit > 0 && msg->exposure_time_upper_limit != exposure_time_upper_limit_) {
+//      exposure_time_upper_limit_ = msg->exposure_time_upper_limit;
+//      Arena::SetNodeValue<double>(nodemap, "ExposureAutoUpperLimit", exposure_time_upper_limit_);
+//      log_info("Exposure Time Upper Limit updated to " + std::to_string(msg->exposure_time_upper_limit));
+//    }
+//    if (msg->exposure_time_lower_limit > 0 && msg->exposure_time_lower_limit != exposure_time_lower_limit_) {
+//      exposure_time_lower_limit_ = msg->exposure_time_lower_limit;
+//      Arena::SetNodeValue<double>(nodemap, "ExposureAutoLowerLimit", exposure_time_lower_limit_);
+//      log_info("Exposure Time Lower Limit updated to " + std::to_string(msg->exposure_time_lower_limit));
+//    }
+//    if (msg->gain_upper_limit > 0 && msg->gain_upper_limit != gain_upper_limit_) {
+//      gain_upper_limit_ = msg->gain_upper_limit;
+//      Arena::SetNodeValue<double>(nodemap, "GainAutoUpperLimit", gain_upper_limit_);
+//      log_info("Gain Upper Limit updated to " + std::to_string(msg->gain_upper_limit));
+//    }
+//    if (msg->gain_lower_limit > 0 && msg->gain_lower_limit != gain_lower_limit_) {
+//      gain_lower_limit_ = msg->gain_lower_limit;
+//      Arena::SetNodeValue<double>(nodemap, "GainAutoLowerLimit", gain_lower_limit_);
+//      log_info("Gain Lower Limit updated to " + std::to_string(msg->gain_lower_limit));
+//    }
+//    if (msg->target_brightness > 0 && msg->target_brightness != brightness_) {
+//      brightness_ = msg->target_brightness;
+//      Arena::SetNodeValue<int64_t>(nodemap, "TargetBrightness", brightness_);
+//      log_info("Target Brightness updated to " + std::to_string(msg->target_brightness));
+//    }
+//    if (msg->roi_width > 0 && msg->roi_width != width_aoi_exposure_) {
+//      width_aoi_exposure_ = msg->roi_width;
+//      Arena::SetNodeValue<int64_t>(nodemap, "AutoExposureAOIWidth", width_aoi_exposure_);
+//      log_info("Exposure AOI Width updated to " + std::to_string(msg->roi_width));
+//    }
+//    if (msg->roi_height > 0 && msg->roi_height != height_aoi_exposure_) {
+//      height_aoi_exposure_ = msg->roi_height;
+//      Arena::SetNodeValue<int64_t>(nodemap, "AutoExposureAOIHeight", height_aoi_exposure_);
+//      log_info("Exposure AOI Height updated to " + std::to_string(msg->roi_height));
+//    }
+//    if (msg->roi_offset_x > 0 && msg->roi_offset_x != offset_x_aoi_exposure_) {
+//      offset_x_aoi_exposure_ = msg->roi_offset_x;
+//      Arena::SetNodeValue<int64_t>(nodemap, "AutoExposureAOIOffsetX", offset_x_aoi_exposure_);
+//      log_info("Exposure AOI Offset X updated to " + std::to_string(msg->roi_offset_x));
+//    }
+//    if (msg->roi_offset_y > 0 && msg->roi_offset_y != offset_y_aoi_exposure_) {
+//      offset_y_aoi_exposure_ = msg->roi_offset_y;
+//      Arena::SetNodeValue<int64_t>(nodemap, "AutoExposureAOIOffsetY", offset_y_aoi_exposure_);
+//      log_info("Exposure AOI Offset Y updated to " + std::to_string(msg->roi_offset_y));
+//    }
+//    if (msg->width > 0 && msg->width != width_) {
+//      width_ = msg->width;
+//      Arena::SetNodeValue<int64_t>(nodemap, "Width", width_);
+//      log_info("Width updated to " + std::to_string(msg->width));
+//    }
+//    if (msg->height > 0 && msg->height != height_) {
+//      height_ = msg->height;
+//      Arena::SetNodeValue<int64_t>(nodemap, "Height", height_);
+//      log_info("Height updated to " + std::to_string(msg->height));
+//    }
+
     if (msg->recording == 1 && !is_recording_) {
       start_recording_();
     } else if (msg->recording == 0 && is_recording_) {
@@ -519,7 +552,7 @@ Arena::IDevice* ArenaCameraNode::create_device_ros_()
   return pDevice;
 }
 
-void get_nodes_values_()
+void ArenaCameraNode::get_nodes_values_()
 {
   auto nodemap = m_pDevice->GetNodeMap();
   exposure_time_lower_limit_ = Arena::GetNodeValue<double>(nodemap, "ExposureAutoLowerLimit");
@@ -544,12 +577,12 @@ void ArenaCameraNode::set_nodes_()
   Arena::FeatureStream featureStreamDst(m_pDevice->GetNodeMap());
   featureStreamDst.Read("features.txt");
   // Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(), "ExposureAutoLimitAuto", "Off");
-  // Arena::SetNodeValue<int64_t>(m_pDevice->GetNodeMap(), "TargetBrightness", 140);
+//   Arena::SetNodeValue<int64_t>(m_pDevice->GetNodeMap(), "TargetBrightness", 140);
   // Arena::SetNodeValue<int64_t>(m_pDevice->GetNodeMap(), "AutoExposureAOIWidth", 900);
   // Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "ExposureAutoLowerLimit", 55.288);
-  // Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "ExposureAutoUpperLimit", 1000.63);
+//   Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "ExposureAutoUpperLimit", 30000);
   // Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(), "GainAuto", "Continuous");
-  // Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "GainAutoUpperLimit", 2);
+//   Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "GainAutoUpperLimit", 40);
   Arena::FeatureStream featureStreamout(m_pDevice->GetNodeMap());
   featureStreamout.Write("featuresout.txt");
   // set_nodes_load_profile_();
@@ -570,7 +603,7 @@ void ArenaCameraNode::set_nodes_()
   // Arena::SetNodeValue<int64_t>(nodemap, "Height", height_new);
 }
 
-void set_brightness_node_()
+void ArenaCameraNode::set_brightness_node_()
 {
   auto nodemap = m_pDevice->GetNodeMap();
   Arena::SetNodeValue<int64_t>(nodemap, "TargetBrightness", brightness_);
@@ -671,24 +704,6 @@ void ArenaCameraNode::set_nodes_roi_()
            std::to_string(height_));
 }
 
-void ArenaCameraNode::set_nodes_gain_()
-{
-  if (is_passed_gain_) {  // not default
-    auto nodemap = m_pDevice->GetNodeMap();
-    Arena::SetNodeValue<double>(nodemap, "Gain", gain_);
-    log_info(std::string("\tGain set to ") + std::to_string(gain_));
-  }
-}
-
-void ArenaCameraNode::set_nodes_gamma_()
-{
-  if (is_passed_gamma_) {  // not default
-    auto nodemap = m_pDevice->GetNodeMap();
-    Arena::SetNodeValue<double>(nodemap, "Gamma", gamma_);
-    log_info(std::string("\tGamma set to ") + std::to_string(gamma_));
-  }
-}
-
 void ArenaCameraNode::set_nodes_pixelformat_()
 {
   auto nodemap = m_pDevice->GetNodeMap();
@@ -723,15 +738,6 @@ void ArenaCameraNode::set_nodes_pixelformat_()
           "the device current pixelfromat value is not supported by ROS2. "
           "please use --ros-args -p pixelformat:=\"<supported pixelformat>\".");
     }
-  }
-}
-
-void ArenaCameraNode::set_nodes_exposure_()
-{
-  if (is_passed_exposure_time_) {
-    auto nodemap = m_pDevice->GetNodeMap();
-    Arena::SetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto", "Off");
-    Arena::SetNodeValue<double>(nodemap, "ExposureTime", exposure_time_);
   }
 }
 
