@@ -140,6 +140,7 @@ class ArenaCameraNode : public rclcpp::Node
   void set_nodes_exposure_();
   void set_nodes_trigger_mode_();
   void publish_images_();
+  void get_nodes_values_();
   void set_exposure_node_limits_();
   void set_exposure_aoi_node_();
   void set_awb_aoi_node_();
