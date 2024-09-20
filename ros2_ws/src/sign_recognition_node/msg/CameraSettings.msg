@@ -1,7 +1,12 @@
-float32 exposure_time
-float32 gamma
-float32 gain
+float32 exposure_time_upper_limit
+float32 exposure_time_lower_limit
+int32 gain_lower_limit
+int32 gain_upper_limit
+int32 target_brightness
+roi_width
+roi_height
+roi_offset_x
+roi_offset_y
 int32 width
 int32 height
-string pixelformat
 bool recording

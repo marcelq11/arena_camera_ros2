@@ -107,6 +107,21 @@ class ArenaCameraNode : public rclcpp::Node
   std::string pub_qos_reliability_;
   bool is_passed_pub_qos_reliability_;
 
+  //Parameters for adjusting the exposure time and gain
+  double exposure_time_lower_limit_;
+  double exposure_time_upper_limit_;
+  double gain_lower_limit_;
+  double gain_upper_limit_;
+  int64_t brightness_;
+  int64_t width_aoi_exposure_;
+  int64_t height_aoi_exposure_;
+  int64_t offset_x_aoi_exposure_;
+  int64_t offset_y_aoi_exposure_;
+  int64_t width_aoi_awb_;
+  int64_t height_aoi_awb_;
+  int64_t offset_x_aoi_awb_;
+  int64_t offset_y_aoi_awb_;
+
   void parse_parameters_();
   void initialize_();
 
@@ -125,6 +140,11 @@ class ArenaCameraNode : public rclcpp::Node
   void set_nodes_exposure_();
   void set_nodes_trigger_mode_();
   void publish_images_();
+  void set_exposure_node_limits_();
+  void set_exposure_aoi_node_();
+  void set_awb_aoi_node_();
+  void set_gain_node_limits_();
+  void set_brightness_node_();
 
   void publish_an_image_on_trigger_(
       std::shared_ptr<std_srvs::srv::Trigger::Request> request,

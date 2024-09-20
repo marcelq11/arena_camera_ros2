@@ -519,13 +519,41 @@ Arena::IDevice* ArenaCameraNode::create_device_ros_()
   return pDevice;
 }
 
+void get_nodes_values_()
+{
+  auto nodemap = m_pDevice->GetNodeMap();
+  exposure_time_lower_limit_ = Arena::GetNodeValue<double>(nodemap, "ExposureAutoLowerLimit");
+  exposure_time_upper_limit_ = Arena::GetNodeValue<double>(nodemap, "ExposureAutoUpperLimit");
+  gain_lower_limit_ = Arena::GetNodeValue<double>(nodemap, "GainAutoLowerLimit");
+  gain_upper_limit_ = Arena::GetNodeValue<double>(nodemap, "GainAutoUpperLimit");
+  brightness_ = Arena::GetNodeValue<int64_t>(nodemap, "TargetBrightness");
+  width_aoi_exposure_ = Arena::GetNodeValue<int64_t>(nodemap, "AutoExposureAOIWidth");
+  height_aoi_exposure_ = Arena::GetNodeValue<int64_t>(nodemap, "AutoExposureAOIHeight");
+  offset_x_aoi_exposure_ = Arena::GetNodeValue<int64_t>(nodemap, "AutoExposureAOIOffsetX");
+  offset_y_aoi_exposure_ = Arena::GetNodeValue<int64_t>(nodemap, "AutoExposureAOIOffsetY");
+  width_aoi_awb_ = Arena::GetNodeValue<int64_t>(nodemap, "AwbAOIWidth");
+  height_aoi_awb_ = Arena::GetNodeValue<int64_t>(nodemap, "AwbAOIHeight");
+  offset_x_aoi_awb_ = Arena::GetNodeValue<int64_t>(nodemap, "AwbAOIOffsetX");
+  offset_y_aoi_awb_ = Arena::GetNodeValue<int64_t>(nodemap, "AwbAOIOffsetY");
+}
+
 void ArenaCameraNode::set_nodes_()
 {
+  Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(), "PixelFormat", "BayerRG8");
+
   Arena::FeatureStream featureStreamDst(m_pDevice->GetNodeMap());
   featureStreamDst.Read("features.txt");
-  log_info("Features loaded");
-  set_nodes_load_profile_();
-  set_nodes_roi_();
+  // Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(), "ExposureAutoLimitAuto", "Off");
+  // Arena::SetNodeValue<int64_t>(m_pDevice->GetNodeMap(), "TargetBrightness", 140);
+  // Arena::SetNodeValue<int64_t>(m_pDevice->GetNodeMap(), "AutoExposureAOIWidth", 900);
+  // Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "ExposureAutoLowerLimit", 55.288);
+  // Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "ExposureAutoUpperLimit", 1000.63);
+  // Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(), "GainAuto", "Continuous");
+  // Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "GainAutoUpperLimit", 2);
+  Arena::FeatureStream featureStreamout(m_pDevice->GetNodeMap());
+  featureStreamout.Write("featuresout.txt");
+  // set_nodes_load_profile_();
+  // set_nodes_roi_();
   Arena::SetNodeValue<bool>(m_pDevice->GetNodeMap(), "AcquisitionFrameRateEnable", true);
 
   double desired_fps = 24.0;
@@ -540,6 +568,76 @@ void ArenaCameraNode::set_nodes_()
   // auto nodemap = m_pDevice->GetNodeMap();
   // Arena::SetNodeValue<int64_t>(nodemap, "Width", width_new);
   // Arena::SetNodeValue<int64_t>(nodemap, "Height", height_new);
+}
+
+void set_brightness_node_()
+{
+  auto nodemap = m_pDevice->GetNodeMap();
+  Arena::SetNodeValue<int64_t>(nodemap, "TargetBrightness", brightness_);
+  log_info(std::string("\tBrightness set to ") + std::to_string(brightness_));
+}
+
+void ArenaCameraNode::set_exposure_node_limits_()
+{
+  auto nodemap = m_pDevice->GetNodeMap();
+  if (Arena::GetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto") != "Continuous") {
+    log_info(std::string("\tExposureAuto is not in Continuous mode. Setting it to Continuous"));
+    Arena::SetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto", "Continuous");
+  }
+  Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "ExposureAutoLowerLimit", exposure_time_lower_limit_);
+  Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "ExposureAutoUpperLimit", exposure_time_upper_limit_);
+  log_info(std::string("\tExposureTime limits set to: ") +
+           std::to_string(exposure_time_lower_limit_) + 
+           std::to_string(exposure_time_upper_limit_));
+}
+
+void ArenaCameraNode::set_exposure_aoi_node_()
+{
+  auto nodemap = m_pDevice->GetNodeMap();
+
+  if (Arena::GetNodeValue<bool>(nodemap, "AutoExposureAOIEnable") != 1) {
+      log_info(std::string("\tAutoExposureAOIEnable is not enabled. Setting it to enabled"));
+      Arena::SetNodeValue<bool>(nodemap, "AutoExposureAOIEnable", 1);
+    }
+
+  Arena::SetNodeValue<int64_t>(nodemap, "AutoExposureAOIWidth", width_aoi_exposure_);
+  Arena::SetNodeValue<int64_t>(nodemap, "AutoExposureAOIHeight", height_aoi_exposure_);
+  Arena::SetNodeValue<int64_t>(nodemap, "AutoExposureAOIOffsetX", offset_x_aoi_exposure_);
+  Arena::SetNodeValue<int64_t>(nodemap, "AutoExposureAOIOffsetY", offset_y_aoi_exposure_);
+  log_info(std::string("\tExposure AOI set to ") + std::to_string(width_aoi_exposure_) + ":" + std::to_string(height_aoi_exposure_));
+  log_info(std::string("\tExposure AOI offset set to ") + std::to_string(offset_x_aoi_exposure_) + ":" + std::to_string(offset_y_aoi_exposure_));
+}
+
+void ArenaCameraNode::set_awb_aoi_node_()
+{
+  auto nodemap = m_pDevice->GetNodeMap();
+
+  if (Arena::GetNodeValue<bool>(nodemap, "AwbAOIEnable") != 1) {
+      log_info(std::string("\tAwbAOIEnable is not enabled. Setting it to enabled"));
+      Arena::SetNodeValue<bool>(nodemap, "AwbAOIEnable", 1);
+    }
+
+  Arena::SetNodeValue<int64_t>(nodemap, "AwbAOIWidth", width_aoi_awb_);
+  Arena::SetNodeValue<int64_t>(nodemap, "AwbAOIHeight", height_aoi_awb_);
+  Arena::SetNodeValue<int64_t>(nodemap, "AwbAOIOffsetX", offset_x_aoi_awb_);
+  Arena::SetNodeValue<int64_t>(nodemap, "AwbAOIOffsetY", offset_y_aoi_awb_);
+  log_info(std::string("\tAWB AOI set to ") + std::to_string(width_aoi_awb_) + ":" + std::to_string(height_aoi_awb_));
+  log_info(std::string("\tAWB AOI offset set to ") + std::to_string(offset_x_aoi_awb_) + ":" + std::to_string(offset_y_aoi_awb_));
+}
+
+
+void ArenaCameraNode::set_gain_node_limits_()
+{
+auto nodemap = m_pDevice->GetNodeMap();
+  if (Arena::GetNodeValue<GenICam::gcstring>(nodemap, "GainAuto") != "Continuous") {
+    log_info(std::string("\tGainAuto is not in Continuous mode. Setting it to Continuous"));
+    Arena::SetNodeValue<GenICam::gcstring>(nodemap, "GainAuto", "Continuous");
+  }
+  Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "GainAutoLowerLimit", gain_lower_limit_);
+  Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "GainAutoUpperLimit", gain_upper_limit_);
+  log_info(std::string("\tGain limits set to: ") +
+           std::to_string(gain_lower_limit_) + 
+           std::to_string(gain_upper_limit_));
 }
 
 void ArenaCameraNode::set_nodes_load_profile_()
