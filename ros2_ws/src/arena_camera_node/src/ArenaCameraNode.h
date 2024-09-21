@@ -133,16 +133,16 @@ class ArenaCameraNode : public rclcpp::Node
   Arena::IDevice* create_device_ros_();
   void set_nodes_();
   void set_nodes_load_profile_();
-  void set_nodes_roi_();
+  void set_nodes_resolution_(const camera_msg::msg::CameraSettings::SharedPtr msg);
   void set_nodes_pixelformat_();
   void set_nodes_trigger_mode_();
   void publish_images_();
   void get_nodes_values_();
-  void set_exposure_node_limits_();
-  void set_exposure_aoi_node_();
-  void set_awb_aoi_node_();
-  void set_gain_node_limits_();
-  void set_brightness_node_();
+  void set_exposure_node_limits_(const camera_msg::msg::CameraSettings::SharedPtr msg);
+  void set_exposure_aoi_node_(const camera_msg::msg::CameraSettings::SharedPtr msg);
+  void set_awb_aoi_node_(const camera_msg::msg::CameraSettings::SharedPtr msg);
+  void set_gain_node_limits_(const camera_msg::msg::CameraSettings::SharedPtr msg);
+  void set_brightness_node_(const camera_msg::msg::CameraSettings::SharedPtr msg);
 
   void publish_an_image_on_trigger_(
       std::shared_ptr<std_srvs::srv::Trigger::Request> request,
