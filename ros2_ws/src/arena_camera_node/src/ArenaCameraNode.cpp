@@ -558,9 +558,14 @@ void ArenaCameraNode::set_nodes_()
 void ArenaCameraNode::set_brightness_node_(const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
   auto nodemap = m_pDevice->GetNodeMap();
+  if (msg->target_brightness < 0 && msg->target_brightness > 120) {
+    log_info(std::string("\tBrightness value is out of range."));
+    return;
+  }
   brightness_ = msg->target_brightness;
   Arena::SetNodeValue<int64_t>(nodemap, "TargetBrightness", brightness_);
   log_info(std::string("\tBrightness set to ") + std::to_string(brightness_));
+  
 }
 
 void ArenaCameraNode::set_exposure_node_limits_(const camera_msg::msg::CameraSettings::SharedPtr msg)
@@ -569,6 +574,11 @@ void ArenaCameraNode::set_exposure_node_limits_(const camera_msg::msg::CameraSet
   if (Arena::GetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto") != "Continuous") {
     log_info(std::string("\tExposureAuto is not in Continuous mode. Setting it to Continuous"));
     Arena::SetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto", "Continuous");
+  }
+  if (msg->exposure_time_upper_limit > 30000 || msg->exposure_time_lower_limit < 30 || 
+      msg->exposure_time_upper_limit < msg->exposure_time_lower_limit) {
+    log_info(std::string("\tExposureTime limits are out of range."));
+    return;
   }
   exposure_time_lower_limit_ = msg->exposure_time_lower_limit;
   exposure_time_upper_limit_ = msg->exposure_time_upper_limit;
@@ -587,6 +597,11 @@ void ArenaCameraNode::set_exposure_aoi_node_(const camera_msg::msg::CameraSettin
       log_info(std::string("\tAutoExposureAOIEnable is not enabled. Setting it to enabled"));
       Arena::SetNodeValue<bool>(nodemap, "AutoExposureAOIEnable", 1);
     }
+  if ( msg->roi_width > width_ || msg->roi_height > height_ || 
+       msg->roi_offset_x + msg->roi_width > width_ || msg->roi_offset_y + msg->roi_height > height_) {
+    log_info(std::string("\tExposure AOI is out of range."));
+    return;
+  }
   width_aoi_exposure_ = msg->roi_width;
   height_aoi_exposure_ = msg->roi_height;
   offset_x_aoi_exposure_ = msg->roi_offset_x;
@@ -607,6 +622,11 @@ void ArenaCameraNode::set_awb_aoi_node_(const camera_msg::msg::CameraSettings::S
       log_info(std::string("\tAwbAOIEnable is not enabled. Setting it to enabled"));
       Arena::SetNodeValue<bool>(nodemap, "AwbAOIEnable", 1);
     }
+  if ( msg->roi_width > width_ || msg->roi_height > height_ || 
+       msg->roi_offset_x + msg->roi_width > width_ || msg->roi_offset_y + msg->roi_height > height_) {
+    log_info(std::string("\tAWB AOI is out of range."));
+    return;
+  }
   width_aoi_awb_ = msg->roi_width;
   height_aoi_awb_ = msg->roi_height;
   offset_x_aoi_awb_ = msg->roi_offset_x;
@@ -627,6 +647,11 @@ auto nodemap = m_pDevice->GetNodeMap();
     log_info(std::string("\tGainAuto is not in Continuous mode. Setting it to Continuous"));
     Arena::SetNodeValue<GenICam::gcstring>(nodemap, "GainAuto", "Continuous");
   }
+  if (msg->gain_upper_limit > 35 || msg->gain_lower_limit < 0 || 
+      msg->gain_upper_limit < msg->gain_lower_limit) {
+    log_info(std::string("\tGain limits are out of range."));
+    return;
+  }
   gain_lower_limit_ = msg->gain_lower_limit;
   gain_upper_limit_ = msg->gain_upper_limit;
   Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "GainAutoLowerLimit", gain_lower_limit_);
@@ -639,6 +664,10 @@ auto nodemap = m_pDevice->GetNodeMap();
 void ArenaCameraNode::set_nodes_resolution_(const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
   auto nodemap = m_pDevice->GetNodeMap();
+  if (msg->width < 0 || msg->height < 0 || msg->width > 2448 || msg->height > 2048) {
+    log_info(std::string("\tResolution is out of range."));
+    return;
+  }
   width_ = msg->width;
   height_ = msg->height;
   Arena::SetNodeValue<int64_t>(nodemap, "Width", width_);
