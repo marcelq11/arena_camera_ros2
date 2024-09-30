@@ -164,9 +164,23 @@ void ArenaCameraNode::initialize_()
 
   // rmw_qos_history_policy_t history_policy_ = RMW_QOS_
   // rmw_qos_history_policy_t;
-  // auto pub_qos_init = rclcpp::QoSInitialization(history_policy_, );
+  // auto pub_qos_init = rclcpp::QoSInitialization(history_policy_, )
 
+  // Create a subscriber for the /params topic
+  rclcpp::QoS qos_settings = rclcpp::QoS(rclcpp::KeepLast(10)).reliable();
 
+  //creating callback group to sub
+  auto my_callback_group = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
+  rclcpp::SubscriptionOptions options;
+  options.callback_group = my_callback_group;
+
+  //creating subscriber
+  m_params_subscriber_ = this->create_subscription<camera_msg::msg::CameraSettings>(
+    "/params", qos_settings,
+    std::bind(&ArenaCameraNode::params_callback_, this, std::placeholders::_1),
+    options);
+
+  //setting up a publisher
   int64_t depth_1 = 100;
   pub_qos_.keep_last(depth_1);
   m_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
@@ -188,18 +202,12 @@ void ArenaCameraNode::initialize_()
 
   log_info(pub_qos_info.str());
 
-  // Create a subscriber for the /params topic
-  m_params_subscriber_ =
-      this->create_subscription<camera_msg::msg::CameraSettings>(
-          "/params", 10,
-          std::bind(&ArenaCameraNode::params_callback_, this,
-                    std::placeholders::_1));
-
-  // subciber loop
+  // publisher loop
   auto timer_callback = [this]() -> void { this->publish_images_(); };
   auto publish_interval =
       std::chrono::milliseconds(25);  // Frequency of publishing images
   m_publish_timer = this->create_wall_timer(publish_interval, timer_callback);
+
   // Recording
   is_recording_ = false;
   folder_path_ = "videos";
@@ -210,6 +218,7 @@ void ArenaCameraNode::initialize_()
 void ArenaCameraNode::params_callback_(
     const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
+  log_info("Received new parameters");
   if (!msg) {
     return;
   }
@@ -234,9 +243,9 @@ void ArenaCameraNode::params_callback_(
         msg->roi_offset_y != offset_y_aoi_exposure_) {
       set_exposure_aoi_node_(msg);
     }
-    if (msg->roi_width != width_aoi_awb_ || 
+    if (msg->roi_width != width_aoi_awb_ ||
         msg->roi_height != height_aoi_awb_ ||
-        msg->roi_offset_x != offset_x_aoi_awb_ || 
+        msg->roi_offset_x != offset_x_aoi_awb_ ||
         msg->roi_offset_y != offset_y_aoi_awb_) {
       set_awb_aoi_node_(msg);
     }

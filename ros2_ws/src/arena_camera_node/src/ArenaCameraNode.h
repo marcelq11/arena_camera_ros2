@@ -69,6 +69,7 @@ class ArenaCameraNode : public rclcpp::Node
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr m_trigger_an_image_srv_;
 
 // Subscriber for parameter updates
+  rclcpp::CallbackGroup::SharedPtr callback_group_;
   rclcpp::Subscription<camera_msg::msg::CameraSettings>::SharedPtr m_params_subscriber_;
   bool is_stream_started_ = false;
 
