@@ -10,3 +10,4 @@ int64 roi_offset_y
 int64 width
 int64 height
 bool recording
+bool system_start

@@ -15,17 +15,23 @@ class CameraPublisher(Node):
         super().__init__('camera_publisher')
         self.publisher_ = self.create_publisher(CameraSettings, 'params', 10)
         self.gui = CameraGUI(update_callback=self.update_settings,
-                             error_func=self.raise_error, parameters_path=path_to_camera_params)  # Przekazanie callback
+                             error_func=self.raise_error, parameters_path=path_to_camera_params)
 
     def update_settings(self):
-        gain, exposure, gamma, pixel_format, width, height, recording = self.gui.return_params()
+        exposure_limits, gain_limits, brightness, roi, resolution, system_start, recording = self.gui.return_parameters()
         msg = CameraSettings()
-        msg.exposure_time = exposure
-        msg.gamma = gamma
-        msg.gain = gain
-        msg.pixelformat = pixel_format
-        msg.width = width
-        msg.height = height
+        msg.exposure_time_upper_limit = float(exposure_limits[1])
+        msg.exposure_time_lower_limit = float(exposure_limits[0])
+        msg.gain_lower_limit = float(gain_limits[0])
+        msg.gain_upper_limit = float(gain_limits[1])
+        msg.target_brightness = int(brightness)
+        msg.roi_width = int(roi[0])
+        msg.roi_height = int(roi[1])
+        msg.roi_offset_x = int(roi[2])
+        msg.roi_offset_y = int(roi[3])
+        msg.width = int(resolution[0])
+        msg.height = int(resolution[1])
+        msg.system_start = system_start
         msg.recording = recording
         self.publisher_.publish(msg)
         self.get_logger().info(f'Publishing: {msg}')
