@@ -11,6 +11,7 @@ import time
 import threading
 import queue
 from image_processing.image_main import SignTextRecognitionSystem
+from camera_msg.msg import CameraSettings
 
 qos_profile = QoSProfile(depth=100, reliability=ReliabilityPolicy.RELIABLE)
 
@@ -24,6 +25,7 @@ class SignTextRecognitionNode(Node):
         models_path = os.environ.get('MODELS_PATH')
 
         self.enable_preview = True
+        self.run_system = False
 
         self.sign_text_recognition_system = SignTextRecognitionSystem(
             models_path=models_path,
@@ -41,9 +43,16 @@ class SignTextRecognitionNode(Node):
             '/image',
             self.image_callback,
             qos_profile)
-        self.subscription
 
-        self.publisher = self.create_publisher(String, 'sign_text_output', 10)
+        self.param_subscriber = self.create_subscription(
+            CameraSettings,
+            '/params',
+            self.param_callback,
+            qos_profile)
+
+
+        self.publisher_results = self.create_publisher(String, 'sign_text_output', 10)
+        self.publisher_sign = self.create_publisher(Image, '/sign', 10)
         self.previous_time = time.time()
         self.sum_time = 0
         self.frame_count = 0
@@ -60,33 +69,38 @@ class SignTextRecognitionNode(Node):
             self.get_logger().error(f'Error converting image: {e}')
             return
         
- 
-        if self.enable_preview:
-            signs, text, image = self.sign_text_recognition_system.process_frame(cv_image)
-        
-  
-        text_output = "Sample Text Output"
-        msg = String()
-        msg.data = text_output
-        self.publisher.publish(msg)
+        if self.run_system:
+            if self.enable_preview:
+                signs, text, image = self.sign_text_recognition_system.process_frame(cv_image)
+            else :
+                signs, text = self.sign_text_recognition_system.process_image(cv_image)
 
-      
-        current_time = time.time()
-        frame_duration = current_time - self.previous_time
+            #TODO: FIND EXAMPLE WHERE 2 signs are returned at the same time
+            if len(signs) > 0:
+                sign = self.bridge.cv2_to_imgmsg(signs[0], "bgr8")
+                self.publisher_sign.publish(sign)
+            if len(text) > 0:
+                msg = String()
+                msg.data = str(text)
+                self.publisher_results.publish(msg)
 
-        #FPS calculation FOR TESTING
-        # self.sum_time += frame_duration
-        # self.frame_count += 1
-        # if frame_duration > 0:
-        #     fps = 1.0 / frame_duration
-        #     avg_fps = self.frame_count / self.sum_time
-        #     self.get_logger().info(f'FPS: {fps:.2f}, Average FPS: {avg_fps:.2f}')
 
-        self.previous_time = current_time
+            current_time = time.time()
+            frame_duration = current_time - self.previous_time
 
-        if self.enable_preview:
-            image = cv2.resize(image, (640, 640))
-            self.image_queue.put(image)
+            #FPS calculation FOR TESTING
+            # self.sum_time += frame_duration
+            # self.frame_count += 1
+            # if frame_duration > 0:
+            #     fps = 1.0 / frame_duration
+            #     avg_fps = self.frame_count / self.sum_time
+            #     self.get_logger().info(f'FPS: {fps:.2f}, Average FPS: {avg_fps:.2f}')
+
+            self.previous_time = current_time
+
+            if self.enable_preview:
+                image = cv2.resize(image, (640, 640))
+                self.image_queue.put(image)
 
     def display_images(self):
         while rclpy.ok():
@@ -97,6 +111,9 @@ class SignTextRecognitionNode(Node):
                     cv2.waitKey(1)
             except queue.Empty:
                 continue
+
+    def param_callback(self, msg):
+        self.run_system = msg.system_start
 
 def main(args=None):
     rclpy.init(args=args)
