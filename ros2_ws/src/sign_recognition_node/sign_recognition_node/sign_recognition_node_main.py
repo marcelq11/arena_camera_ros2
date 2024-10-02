@@ -19,6 +19,7 @@ class SignTextRecognitionNode(Node):
     def __init__(self):
         super().__init__('sign_text_recognition_node')
 
+        self.system_restarted = True
         self.bridge = CvBridge()
         self.image_queue = queue.Queue()
 
@@ -102,6 +103,8 @@ class SignTextRecognitionNode(Node):
                 image = cv2.resize(image, (640, 640))
                 self.image_queue.put(image)
 
+            self.system_restarted = False
+
     def display_images(self):
         while rclpy.ok():
             try:
@@ -114,6 +117,9 @@ class SignTextRecognitionNode(Node):
 
     def param_callback(self, msg):
         self.run_system = msg.system_start
+        if not self.run_system and not self.system_restarted:
+            self.sign_text_recognition_system.reset_system()
+            self.system_restarted = True
 
 def main(args=None):
     rclpy.init(args=args)
