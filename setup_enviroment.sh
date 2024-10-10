@@ -1,10 +1,6 @@
 #!/bin/bash
 #Init submodules
-git submodule update --init --recursive
-#Update submodules
-git submodule update --remote --recursive
-
-
+git submodule update --init --remote --recursive
 
 BASE_DIR=$(pwd)
 DEST_DIR=$(pwd)/ros2_ws/src/sign_recognition_node/sign_recognition_node/Distance_Sign_Recognition
@@ -16,7 +12,7 @@ export PYTHONPATH="$PYTHONPATH:$DEST_DIR/utils"
 
 cd "$DEST_DIR/Models"
 
-bash download_models.sh
+#bash download_models.sh
 
 cd $BASE_DIR
 
@@ -33,4 +29,3 @@ source install/setup.bash || { echo "Problem with sourcing install"; exit 1; }
 
 echo $PYTHONPATH
 
-ros2 launch camera_launch camera_launch.launch.py
