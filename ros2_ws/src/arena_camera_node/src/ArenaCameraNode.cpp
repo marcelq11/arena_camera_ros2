@@ -322,6 +322,7 @@ void ArenaCameraNode::publish_images_()
     // RCLCPP_INFO(this->get_logger(), "Height ARENA CAMERA: %ld", Height_check);
     auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
     pImage = m_pDevice->GetImage(1000);
+    p_image_msg->header.stamp = this->now();
     msg_form_image_(pImage, *p_image_msg);
     if (is_recording_) {
       Arena::IImage* convertedImage =
