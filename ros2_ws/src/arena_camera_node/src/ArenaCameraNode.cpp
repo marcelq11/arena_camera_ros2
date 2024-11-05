@@ -322,7 +322,6 @@ void ArenaCameraNode::publish_images_()
     // RCLCPP_INFO(this->get_logger(), "Height ARENA CAMERA: %ld", Height_check);
     auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
     pImage = m_pDevice->GetImage(1000);
-    p_image_msg->header.stamp = this->now();
     msg_form_image_(pImage, *p_image_msg);
     if (is_recording_) {
       Arena::IImage* convertedImage =
@@ -363,10 +362,12 @@ void ArenaCameraNode::msg_form_image_(Arena::IImage* pImage,
     //      - stamp.sec
     //      - stamp.nanosec
     //      - Frame ID
+    auto now = std::chrono::system_clock::now();
+    uint64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
     image_msg.header.stamp.sec =
-        static_cast<uint32_t>(pImage->GetTimestampNs() / 1000000000);
+        static_cast<uint32_t>(unix_time_ns / 1000000000);
     image_msg.header.stamp.nanosec =
-        static_cast<uint32_t>(pImage->GetTimestampNs() % 1000000000);
+        static_cast<uint32_t>(unix_time_ns % 1000000000);
     image_msg.header.frame_id = std::to_string(pImage->GetFrameId());
 
     //
