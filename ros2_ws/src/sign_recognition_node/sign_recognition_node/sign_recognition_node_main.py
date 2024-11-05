@@ -27,6 +27,8 @@ class SignTextRecognitionNode(Node):
 
         self.enable_preview = True
         self.run_system = False
+        self.save_frames_and_signs = True
+        self.mode_selector = 1 # 0 for full system, 1 for only sign detection
 
         self.sign_text_recognition_system = SignTextRecognitionSystem(
             models_path=models_path,
@@ -34,7 +36,7 @@ class SignTextRecognitionNode(Node):
             save_results=False,
             show_signs=False,
             show_images=False,
-            save_frames=False,
+            save_signs=self.save_frames_and_signs,
             enable_preview=self.enable_preview,
             ocr='paddle'
         )
@@ -63,18 +65,19 @@ class SignTextRecognitionNode(Node):
         self.display_thread.daemon = True
         self.display_thread.start()
 
-    def image_callback(self, msg):
-        try:
-            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-        except CvBridgeError as e:
-            self.get_logger().error(f'Error converting image: {e}')
-            return
-        
+    def recognition_system_handler(self, cv_image, time_stamp):
+        image = cv_image
         if self.run_system:
-            if self.enable_preview:
-                signs, text, image = self.sign_text_recognition_system.process_frame(cv_image)
-            else :
-                signs, text = self.sign_text_recognition_system.process_image(cv_image)
+            if self.mode_selector == 0:
+                if self.enable_preview:
+                    signs, text, image = self.sign_text_recognition_system.process_frame(cv_image, time_stamp)
+                else :
+                    signs, text = self.sign_text_recognition_system.process_frame(cv_image, time_stamp)
+            elif self.mode_selector == 1:
+                if self.enable_preview:
+                    signs, frames, image = self.sign_text_recognition_system.frame_selector(cv_image, time_stamp)
+                else:
+                    signs, frames = self.sign_text_recognition_system.frame_selector(cv_image, time_stamp)
 
             #TODO: FIND EXAMPLE WHERE 2 signs are returned at the same time
             if len(signs) > 0:
@@ -84,26 +87,23 @@ class SignTextRecognitionNode(Node):
                 msg = String()
                 msg.data = str(text)
                 self.publisher_results.publish(msg)
+        return image
 
+    def image_callback(self, msg):
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            time_stamp = msg.header.stamp.sec * 1_000_000_000 + msg.header.stamp.nanosec
+        except CvBridgeError as e:
+            self.get_logger().error(f'Error converting image: {e}')
+            return
 
-            current_time = time.time()
-            frame_duration = current_time - self.previous_time
+        self.recognition_system_handler(cv_image, time_stamp)
 
-            #FPS calculation FOR TESTING
-            # self.sum_time += frame_duration
-            # self.frame_count += 1
-            # if frame_duration > 0:
-            #     fps = 1.0 / frame_duration
-            #     avg_fps = self.frame_count / self.sum_time
-            #     self.get_logger().info(f'FPS: {fps:.2f}, Average FPS: {avg_fps:.2f}')
+        if self.enable_preview:
+            image = cv2.resize(image, (640, 640))
+            self.image_queue.put(image)
 
-            self.previous_time = current_time
-
-            if self.enable_preview:
-                image = cv2.resize(image, (640, 640))
-                self.image_queue.put(image)
-
-            self.system_restarted = False
+        self.system_restarted = False
 
     def display_images(self):
         while rclpy.ok():
