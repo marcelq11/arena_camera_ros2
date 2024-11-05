@@ -254,6 +254,11 @@ void ArenaCameraNode::params_callback_(
       height_ = msg->height;
       set_nodes_resolution_(msg);
     }
+    if (!is_stream_started_)
+    {
+      m_pDevice->StartStream();
+      is_stream_started_ = true;
+    }
     if (msg->recording == 1 && !is_recording_) {
       start_recording_();
     } else if (msg->recording == 0 && is_recording_) {
@@ -596,7 +601,7 @@ void ArenaCameraNode::set_exposure_node_limits_(const camera_msg::msg::CameraSet
   Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "ExposureAutoLowerLimit", exposure_time_lower_limit_);
   Arena::SetNodeValue<double>(m_pDevice->GetNodeMap(), "ExposureAutoUpperLimit", exposure_time_upper_limit_);
   log_info(std::string("\tExposureTime limits set to: ") +
-           std::to_string(exposure_time_lower_limit_) + 
+           std::to_string(exposure_time_lower_limit_) + " : " +
            std::to_string(exposure_time_upper_limit_));
 }
 
@@ -612,6 +617,10 @@ void ArenaCameraNode::set_exposure_aoi_node_(const camera_msg::msg::CameraSettin
        msg->roi_offset_x + msg->roi_width > width_ || msg->roi_offset_y + msg->roi_height > height_) {
     log_info(std::string("\tExposure AOI is out of range."));
     return;
+  }
+  if (is_stream_started_) {
+    m_pDevice->StopStream();
+    is_stream_started_ = false;
   }
   width_aoi_exposure_ = msg->roi_width;
   height_aoi_exposure_ = msg->roi_height;
@@ -637,6 +646,10 @@ void ArenaCameraNode::set_awb_aoi_node_(const camera_msg::msg::CameraSettings::S
        msg->roi_offset_x + msg->roi_width > width_ || msg->roi_offset_y + msg->roi_height > height_) {
     log_info(std::string("\tAWB AOI is out of range."));
     return;
+  }
+  if (is_stream_started_) {
+    m_pDevice->StopStream();
+    is_stream_started_ = false;
   }
   width_aoi_awb_ = msg->roi_width;
   height_aoi_awb_ = msg->roi_height;
@@ -674,10 +687,15 @@ auto nodemap = m_pDevice->GetNodeMap();
 
 void ArenaCameraNode::set_nodes_resolution_(const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
+
   auto nodemap = m_pDevice->GetNodeMap();
   if (msg->width < 0 || msg->height < 0 || msg->width > 2448 || msg->height > 2048) {
     log_info(std::string("\tResolution is out of range."));
     return;
+  }
+  if (is_stream_started_) {
+    m_pDevice->StopStream();
+    is_stream_started_ = false;
   }
   width_ = msg->width;
   height_ = msg->height;
@@ -700,7 +718,10 @@ void ArenaCameraNode::set_nodes_pixelformat_()
   auto nodemap = m_pDevice->GetNodeMap();
   // TODO ---------------------------------------------------------------------
   // PIXEL FORMAT HANDLEING
-
+  if (is_stream_started_) {
+    m_pDevice->StopStream();
+    is_stream_started_ = false;
+  }
   if (is_passed_pixelformat_ros_) {
     pixelformat_pfnc_ = K_ROS2_PIXELFORMAT_TO_PFNC[pixelformat_ros_];
     if (pixelformat_pfnc_.empty()) {
