@@ -84,29 +84,9 @@ class ArenaCameraNode : public rclcpp::Node
   size_t height_;
   bool is_passed_height;
 
-  double gain_;
-  bool is_passed_gain_;
-
-  double gamma_;
-  bool is_passed_gamma_;
-
-  double exposure_time_;
-  bool is_passed_exposure_time_;
-
   std::string pixelformat_pfnc_;
   std::string pixelformat_ros_;
   bool is_passed_pixelformat_ros_;
-
-  bool trigger_mode_activated_;
-
-  std::string pub_qos_history_;
-  bool is_passed_pub_qos_history_;
-
-  size_t pub_qos_history_depth_;
-  bool is_passed_pub_qos_history_depth_;
-
-  std::string pub_qos_reliability_;
-  bool is_passed_pub_qos_reliability_;
 
   //Parameters for adjusting the exposure time and gain
   double exposure_time_lower_limit_;
@@ -136,7 +116,6 @@ class ArenaCameraNode : public rclcpp::Node
   void set_nodes_load_profile_();
   void set_nodes_resolution_(const camera_msg::msg::CameraSettings::SharedPtr msg);
   void set_nodes_pixelformat_();
-  void set_nodes_trigger_mode_();
   void publish_images_();
   void get_nodes_values_();
   void set_exposure_node_limits_(const camera_msg::msg::CameraSettings::SharedPtr msg);
@@ -145,9 +124,6 @@ class ArenaCameraNode : public rclcpp::Node
   void set_gain_node_limits_(const camera_msg::msg::CameraSettings::SharedPtr msg);
   void set_brightness_node_(const camera_msg::msg::CameraSettings::SharedPtr msg);
 
-  void publish_an_image_on_trigger_(
-      std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-      std::shared_ptr<std_srvs::srv::Trigger::Response> response);
   void msg_form_image_(Arena::IImage* pImage,
                        sensor_msgs::msg::Image& image_msg);
 // Callback function to handle parameter updates
