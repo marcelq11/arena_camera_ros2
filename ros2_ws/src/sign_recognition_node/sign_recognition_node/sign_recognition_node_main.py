@@ -29,6 +29,8 @@ class SignTextRecognitionNode(Node):
         self.run_system = False
         self.save_frames_and_signs = True
         self.mode_selector = 1 # 0 for full system, 1 for only sign detection
+        self.vehicle_move = True #TODO: change to false after adding the vehicle movement detection
+        self.previous_mode = self.mode_selector
 
         self.sign_text_recognition_system = SignTextRecognitionSystem(
             models_path=models_path,
@@ -65,9 +67,19 @@ class SignTextRecognitionNode(Node):
         self.display_thread.daemon = True
         self.display_thread.start()
 
+    def mode_selector_handler(self):
+        if not self.vehicle_move:
+            self.previous_mode = self.mode_selector
+            self.mode_selector = 2
+        else:
+            self.mode_selector = self.previous_mode
+
     def recognition_system_handler(self, cv_image, time_stamp):
         image = cv_image
         if self.run_system:
+            
+            self.mode_selector_handler()
+
             if self.mode_selector == 0:
                 if self.enable_preview:
                     signs, text, image = self.sign_text_recognition_system.process_frame(cv_image, time_stamp)
@@ -78,15 +90,21 @@ class SignTextRecognitionNode(Node):
                     signs, frames, image = self.sign_text_recognition_system.frame_selector(cv_image, time_stamp)
                 else:
                     signs, frames = self.sign_text_recognition_system.frame_selector(cv_image, time_stamp)
+            elif self.mode_selector == 2:
+                self.sign_text_recognition_system.process_sign_images(continue_processing=False)
+            elif self.mode_selector == 3:
+                self.sign_text_recognition_system.process_sign_images(continue_processing=True)
 
             #TODO: FIND EXAMPLE WHERE 2 signs are returned at the same time
-            if len(signs) > 0:
-                sign = self.bridge.cv2_to_imgmsg(signs[0], "bgr8")
-                self.publisher_sign.publish(sign)
-            if len(text) > 0:
-                msg = String()
-                msg.data = str(text)
-                self.publisher_results.publish(msg)
+
+            #Probably it will be deleted
+            # if len(signs) > 0:
+            #     sign = self.bridge.cv2_to_imgmsg(signs[0], "bgr8")
+            #     self.publisher_sign.publish(sign)
+            # if len(text) > 0:
+            #     msg = String()
+            #     msg.data = str(text)
+            #     self.publisher_results.publish(msg)
         return image
 
     def image_callback(self, msg):
