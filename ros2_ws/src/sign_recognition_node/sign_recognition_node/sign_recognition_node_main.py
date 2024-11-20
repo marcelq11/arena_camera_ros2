@@ -44,7 +44,7 @@ class SignTextRecognitionNode(Node):
             show_images=False,
             save_signs=self.save_frames_and_signs,
             enable_preview=self.enable_preview,
-            ocr='paddle'
+            ocr='paddle',
             system_version=self.system_version
         )
 
