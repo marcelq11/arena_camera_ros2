@@ -26,7 +26,7 @@ class SignTextRecognitionNode(Node):
         self.image_queue = queue.Queue()
 
         models_path = os.environ.get('MODELS_PATH')
-
+        
         self.enable_preview = True
         self.run_system = True
         self.save_frames_and_signs = True
@@ -165,7 +165,6 @@ class SignTextRecognitionNode(Node):
             self.sign_text_recognition_system.reset_system()
             self.system_restarted = True
             self.get_logger().info('System reset')
-        self.vehicle_move = msg.is_moving
 
 def main(args=None):
     rclpy.init(args=args)
