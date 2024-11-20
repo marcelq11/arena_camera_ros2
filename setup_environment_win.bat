@@ -9,9 +9,7 @@ set "DEST_DIR=%BASE_DIR%\ros2_ws\src\sign_recognition_node\sign_recognition_node
 REM Export the PYTHONPATH only if it hasn't been set already
 echo %PYTHONPATH% | find /I "%DEST_DIR%" >nul
 if errorlevel 1 (
-    set "PYTHONPATH=%DEST_DIR%"
-    set "PYTHONPATH=%PYTHONPATH%;%DEST_DIR%\image_processing"
-    set "PYTHONPATH=%PYTHONPATH%;%DEST_DIR%\utils"
+    set "PYTHONPATH=%DEST_DIR%;%DEST_DIR%\image_processing;%DEST_DIR%\utils"
 ) else (
     echo PYTHONPATH is already set, skipping
 )
@@ -33,9 +31,6 @@ if "%MODELS_PATH%"=="" (
 
 REM Navigate to ros2_ws directory
 cd ros2_ws || (echo "Failed to change directory to ros2_ws" & exit /b 1)
-
-REM Source ROS 2 environment for RoboStack
-call "C:\Users\marce\miniforge3\envs\ros_env\Library\share\ros2\setup.bat"
 
 REM Build using colcon and check if it succeeded
 colcon build --cmake-args "-DPython_EXECUTABLE=%CONDA_PREFIX%\python.exe -DPython3_EXECUTABLE=%CONDA_PREFIX%\python.exe -DPYTHON_EXECUTABLE=%CONDA_PREFIX%\python.exe -DPython3_FIND_STRATEGY=LOCATION -DPython_FIND_STRATEGY=LOCATION" || (echo "Colcon build failed" & exit /b 1)

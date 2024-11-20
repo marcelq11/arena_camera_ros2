@@ -12,7 +12,7 @@ export PYTHONPATH="$PYTHONPATH:$DEST_DIR/utils"
 
 cd "$DEST_DIR/Models"
 
-#bash download_models.sh
+bash download_models.sh
 
 cd $BASE_DIR
 
