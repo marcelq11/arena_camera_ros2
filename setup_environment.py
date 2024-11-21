@@ -1,23 +1,22 @@
 import os
 import platform
+import pyautogui
 import subprocess
+import time
 
 
 def main():
     # Detect the operating system
     system = platform.system()
-
-    # Define the script names
-    linux_script = "setup_environment.sh"
-    windows_script = "setup_environment_win.bat"
-
     try:
         if system == "Linux":
             print("Detected Linux system. Running the .sh script.")
-            subprocess.run(["bash", linux_script], check=True)
+            time.sleep(2)
+            pyautogui.typewrite('./setup_environment.sh\n', interval=0.1)
         elif system == "Windows":
             print("Detected Windows system. Running the .bat script.")
-            subprocess.run([windows_script], shell=True, check=True)
+            time.sleep(2)
+            pyautogui.typewrite('setup_environment_win.bat\n', interval=0.1)
         else:
             print(f"Unsupported operating system: {system}")
     except subprocess.CalledProcessError as e:
