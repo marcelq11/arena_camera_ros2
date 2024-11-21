@@ -140,12 +140,10 @@ class SignTextRecognitionNode(Node):
             
         self.previous_time = current_time
 
-
-        self.recognition_system_handler(cv_image, time_stamp)
-
+        image =  self.recognition_system_handler(cv_image, time_stamp)
         if self.enable_preview:
-            cv_image = cv2.resize(cv_image, (640, 640))
-            self.image_queue.put(cv_image)
+            image = cv2.resize(image, (640, 640))
+            self.image_queue.put(image)
 
         self.system_restarted = False
 
