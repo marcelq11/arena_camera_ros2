@@ -686,4 +686,5 @@ dependencies:
       - sympy==1.13.1
       - termcolor==2.5.0
       - threadpoolctl==3.5.0
+      - pyautogui
 prefix: C:\Users\marce\miniforge3\envs\ros2_env
