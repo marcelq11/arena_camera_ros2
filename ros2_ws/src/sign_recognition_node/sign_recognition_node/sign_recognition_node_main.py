@@ -37,8 +37,9 @@ class SignTextRecognitionNode(Node):
         self.previous_time = time.time() #delete
 
         self.sign_text_recognition_system = SignTextRecognitionSystem(
+            error_callback = self.error_callback,
             models_path=models_path,
-            model_type='yolov8n_cpu_480',
+            model_type='yolovaaa8n_cpu_480',
             save_results=False,
             show_signs=False,
             show_images=False,
@@ -71,6 +72,9 @@ class SignTextRecognitionNode(Node):
         self.display_thread.daemon = True
         self.display_thread.start()
         self.start_time = 0
+
+    def error_callback(self, error):
+        self.get_logger().error(f'Error: {error}')
 
     def return_qos_profile(self):
         if self.system_version == 'Windows':
