@@ -39,13 +39,15 @@ class SignTextRecognitionNode(Node):
         self.sign_text_recognition_system = SignTextRecognitionSystem(
             error_callback = self.error_callback,
             models_path=models_path,
-            model_type='yolovaaa8n_cpu_480',
+            model_type='yolov8n_cpu_480',
+            segmentation_type='yolov8l-seg-cropped',
+            detection_type='contrast_straighten',
+            ocr='paddle',
             save_results=False,
             show_signs=False,
             show_images=False,
             save_signs=self.save_frames_and_signs,
             enable_preview=self.enable_preview,
-            ocr='paddle',
             system_version=self.system_version
         )
 
@@ -109,14 +111,6 @@ class SignTextRecognitionNode(Node):
 
             #TODO: FIND EXAMPLE WHERE 2 signs are returned at the same time
 
-            #Probably it will be deleted
-            # if len(signs) > 0:
-            #     sign = self.bridge.cv2_to_imgmsg(signs[0], "bgr8")
-            #     self.publisher_sign.publish(sign)
-            # if len(text) > 0:
-            #     msg = String()
-            #     msg.data = str(text)
-            #     self.publisher_results.publish(msg)
         return image
     
     def sign_processing(self):
@@ -156,7 +150,7 @@ class SignTextRecognitionNode(Node):
             try:
                 cv_image = self.image_queue.get(timeout=1)
                 if cv_image is not None:
-                    cv2.imshow("Image6", cv_image)
+                    cv2.imshow("Image ", cv_image)
                     cv2.waitKey(1)
             except queue.Empty:
                 continue
