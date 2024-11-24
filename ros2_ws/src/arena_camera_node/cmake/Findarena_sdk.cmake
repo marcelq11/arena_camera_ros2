@@ -1,9 +1,10 @@
-set(_LOG_LVL DEBUG) # Logging level
+set(_LOG_LVL DEBUG)
 set(_LOG_LVL_FRMT "-- [ ${_LOG_LVL} ] ")
 
 # Path to Arena SDK root directory for Windows
 if(WIN32)
     set(_arena_sdk_conf "C:/Program Files/Lucid Vision Labs/Arena SDK")
+    message(${_LOG_LVL_FRMT} "Windows path to Arena SDK: ${_arena_sdk_conf}")
 else()
     set(_arena_sdk_conf "/etc/ld.so.conf.d/Arena_SDK.conf")
 endif()
@@ -22,7 +23,7 @@ if(EXISTS ${_arena_sdk_conf})
         execute_process(
             COMMAND bash -c "dirname $(head -n 1 \"/etc/ld.so.conf.d/Arena_SDK.conf\")"
             OUTPUT_VARIABLE arena_sdk_installation_root
-            # ENCODING UTF8
+            #ENCODING UTF8
         )
         string(STRIP ${arena_sdk_installation_root} arena_sdk_installation_root)
     endif()
@@ -34,10 +35,10 @@ if(EXISTS ${_arena_sdk_conf})
     #########
     
     set(arena_sdk_INCLUDE_DIRS
-        "${arena_sdk_installation_root}/GenICam/library/CPP/include"
-        "${arena_sdk_installation_root}/include/Arena"
-        "${arena_sdk_installation_root}/include/Save")
-    set(arena_sdk_INCLUDES ${arena_sdk_INCLUDE_DIRS})
+        ${arena_sdk_installation_root}/GenICam/library/CPP/include
+        ${arena_sdk_installation_root}/include/Arena
+        ${arena_sdk_installation_root}/include/Save)
+    set (arena_sdk_INCLUDES ${arena_sdk_INCLUDE_DIRS})
 
     ###### --------------------------------------------------------------------
     # LIBS
@@ -57,17 +58,62 @@ if(EXISTS ${_arena_sdk_conf})
         )
     else()
         # Linux paths
-        if(EXISTS "${arena_sdk_installation_root}/GenICam/library/lib/Linux64_x64/libGCBase_gcc421_v3_0.so")
+        if(EXISTS ${arena_sdk_installation_root}/GenICam/library/lib/Linux64_x64/libGCBase_gcc421_v3_0.so)
             set(ArenaSDK_Build "Linux64_x64_pre_54")
-        elseif(EXISTS "${arena_sdk_installation_root}/GenICam/library/lib/Linux64_x64/libGCBase_gcc54_v3_3_LUCID.so")
+        elseif(EXISTS ${arena_sdk_installation_root}/GenICam/library/lib/Linux64_x64/libGCBase_gcc54_v3_3_LUCID.so)
             set(ArenaSDK_Build "Linux64_x64_54")
-        elseif(EXISTS "${arena_sdk_installation_root}/GenICam/library/lib/Linux64_ARM/libGCBase_gcc54_v3_3_LUCID.so")
+        elseif(EXISTS ${arena_sdk_installation_root}/GenICam/library/lib/Linux64_ARM/libGCBase_gcc54_v3_3_LUCID.so)
             set(ArenaSDK_Build "Linux64_ARM")
         else()
-            message(FATAL_ERROR "LUCID GenICam not found. Please reinstall ArenaSDK. Contact support@thinklucid.com.")
+            message( FATAL_ERROR "LUCID GenICam not found. Please reinstall ArenaSDK. Contact support@thinklucid.com.")
         endif()
+    endif()
         
-        # Add Linux library paths as before (this code snippet omits for brevity)
+	if("${ArenaSDK_Build}" STREQUAL "Linux64_x64_pre_54")
+		set(arena_sdk_LIBS
+
+		## ArenaSDK
+
+		## release
+		${arena_sdk_installation_root}/lib64/libarena.so
+		${arena_sdk_installation_root}/lib64/libsave.so
+		${arena_sdk_installation_root}/lib64/libgentl.so
+		
+		## GenICam
+		${arena_sdk_installation_root}/GenICam/library/lib/Linux64_x64/libGCBase_gcc421_v3_0.so
+		${arena_sdk_installation_root}/GenICam/library/lib/Linux64_x64/libGenApi_gcc421_v3_0.so
+		
+		)
+	elseif("${ArenaSDK_Build}" STREQUAL "Linux64_x64_54")
+		set(arena_sdk_LIBS
+
+		## ArenaSDK
+
+		## release
+		${arena_sdk_installation_root}/lib64/libarena.so
+		${arena_sdk_installation_root}/lib64/libsave.so
+		${arena_sdk_installation_root}/lib64/libgentl.so
+
+		## GenICam
+		${arena_sdk_installation_root}/GenICam/library/lib/Linux64_x64/libGCBase_gcc54_v3_3_LUCID.so
+		${arena_sdk_installation_root}/GenICam/library/lib/Linux64_x64/libGenApi_gcc54_v3_3_LUCID.so
+		
+		)
+	elseif("${ArenaSDK_Build}" STREQUAL "Linux64_ARM")
+		set(arena_sdk_LIBS
+
+		## ArenaSDK
+
+		## release
+		${arena_sdk_installation_root}/lib/libarena.so
+		${arena_sdk_installation_root}/lib/libsave.so
+		${arena_sdk_installation_root}/lib/libgentl.so
+	
+		## GenICam
+		${arena_sdk_installation_root}/GenICam/library/lib/Linux64_ARM/libGCBase_gcc54_v3_3_LUCID.so
+		${arena_sdk_installation_root}/GenICam/library/lib/Linux64_ARM/libGenApi_gcc54_v3_3_LUCID.so
+		
+		)
     endif()
 
     set(arena_sdk_LIBRARIES ${arena_sdk_LIBS})
