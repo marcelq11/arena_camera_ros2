@@ -1,12 +1,4 @@
 #pragma once
-
-// TODO
-// - remove m_ before private members
-// - add const to member functions
-// fix includes in all files
-// - should we rclcpp::shutdown in construction instead
-//
-
 // std
 #include <chrono>      //chrono_literals
 #include <functional>  // std::bind , std::placeholders
@@ -109,8 +101,6 @@ class ArenaCameraNode : public rclcpp::Node
   void wait_for_device_timer_callback_();
 
   void run_();
-  // TODO :
-  // - handle misconfigured device
   Arena::IDevice* create_device_ros_();
   void set_nodes_();
   void set_nodes_load_profile_();

@@ -1,3 +1,8 @@
+/*
+ * ArenaCameraNode.cpp
+ * Implementation of ArenaCameraNode for managing camera parameters and interfacing with ROS 2.
+ * This file includes parsing parameters, setting quality of service (QoS), and camera settings.
+ */
 #include <cstring>  // memcopy
 #include <filesystem>
 #include <iostream>
@@ -16,7 +21,7 @@ namespace fs = std::filesystem;
 #include "rclcpp_adapter/pixelformat_translation.h"
 #include "rclcpp_adapter/quilty_of_service_translation.cpp"
 
-#define FRAMES_PER_SECOND 28.0
+#define FRAMES_PER_SECOND 24.0
 
 void ArenaCameraNode::parse_parameters_()
 {
@@ -81,10 +86,7 @@ void ArenaCameraNode::initialize_()
   //
   // CHECK DEVICE CONNECTION ( timer ) --------------------------------------
   //
-  // TODO
-  // - Think of design that allow the node to start stream as soon as
-  // it is initialized without waiting for spin to be called
-  // - maybe change 1s to a smaller value
+
   m_wait_for_device_timer_callback_ = this->create_wall_timer(
       1s, std::bind(&ArenaCameraNode::wait_for_device_timer_callback_, this));
 
@@ -114,7 +116,7 @@ void ArenaCameraNode::initialize_()
   m_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
       this->get_parameter("topic").as_string(), pub_qos_);
 
-
+  // setting up QoS
   auto pub_qos_profile = pub_qos_.get_rmw_qos_profile();
  
   log_info("Qos depth = " + std::to_string(pub_qos_profile.depth));
@@ -134,6 +136,21 @@ void ArenaCameraNode::initialize_()
   video_num_ = highest_number + 1;
 }
 
+/**
+ * @brief Callback function to handle new camera settings parameters.
+ *
+ * This function is called when new camera settings parameters are received on topic.
+ * It updates the camera settings based on the received parameters.
+ *
+ * @param msg Shared pointer to the CameraSettings message containing the new parameters. msg can be found in src/camera_msg/msg/CameraSettings.msg
+ *
+ * The function performs the following actions:
+ * - Logs the receipt of new parameters.
+ * - Checks if the device is created.
+ * - Checks if the parameters were updated.
+ * - Updates the parameters based on the received message.
+ * - Starts the camera stream if stop was needed to update the parameters.
+ */
 void ArenaCameraNode::params_callback_(
     const camera_msg::msg::CameraSettings::SharedPtr msg)
 {
@@ -211,6 +228,12 @@ void ArenaCameraNode::wait_for_device_timer_callback_()
   }
 }
 
+/**
+ * @brief Main function to run the camera node.
+ *
+ * This function is called after the camera is discovered and the parameters are set.
+ * It creates the camera device, sets the camera nodes, and starts the camera stream.
+ */
 void ArenaCameraNode::run_()
 {
   auto device = create_device_ros_();
@@ -224,6 +247,12 @@ void ArenaCameraNode::run_()
   is_stream_started_ = true;
 }
 
+/**
+ * @brief Publishes images from the camera.
+ *
+ * This function is called at a fixed interval to publish images from the camera.
+ * It gets the image from the camera, converts it to a ROS2 message, and publishes it.
+ */
 void ArenaCameraNode::publish_images_()
 {
 
@@ -247,14 +276,14 @@ void ArenaCameraNode::publish_images_()
     this->m_pDevice->RequeueBuffer(pImage);
 
     // Calculate and log FPS
-    auto current_time = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = current_time - previous_time_;
-    if (elapsed_seconds.count() > 0) {
-        double fps = 1.0 / elapsed_seconds.count();
-        //RCLCPP_INFO(this->get_logger(), "FPS ARENA CAMERA: %f", fps);
-    }
+    // auto current_time = std::chrono::steady_clock::now();
+    // std::chrono::duration<double> elapsed_seconds = current_time - previous_time_;
+    // if (elapsed_seconds.count() > 0) {
+    //     double fps = 1.0 / elapsed_seconds.count();
+    //     //RCLCPP_INFO(this->get_logger(), "FPS ARENA CAMERA: %f", fps);
+    // }
 
-    previous_time_ = current_time;
+    // previous_time_ = current_time;
 
   } catch (std::exception& e) {
     if (pImage) {
@@ -350,6 +379,11 @@ Arena::IDevice* ArenaCameraNode::create_device_ros_()
   return pDevice;
 }
 
+/**
+ * @brief Get the values of the camera nodes.
+ *
+ * This function gets the values of the camera nodes and stores them in the class variables.
+ */
 void ArenaCameraNode::get_nodes_values_()
 {
   auto nodemap = m_pDevice->GetNodeMap();
@@ -368,6 +402,12 @@ void ArenaCameraNode::get_nodes_values_()
   offset_y_aoi_awb_ = Arena::GetNodeValue<int64_t>(nodemap, "AwbAOIOffsetY");
 }
 
+/**
+ * @brief Set the camera nodes.
+ *
+ * This function sets the camera nodes from file features.txt.
+ * It sets some nodes that can't be set from the file.
+ */
 void ArenaCameraNode::set_nodes_()
 {
   Arena::SetNodeValue<GenICam::gcstring>(m_pDevice->GetNodeMap(), "PixelFormat", "BayerRG8");
@@ -531,8 +571,6 @@ void ArenaCameraNode::set_nodes_load_profile_()
 void ArenaCameraNode::set_nodes_pixelformat_()
 {
   auto nodemap = m_pDevice->GetNodeMap();
-  // TODO ---------------------------------------------------------------------
-  // PIXEL FORMAT HANDLEING
   if (is_stream_started_) {
     m_pDevice->StopStream();
     is_stream_started_ = false;
@@ -549,8 +587,6 @@ void ArenaCameraNode::set_nodes_pixelformat_()
       log_info(std::string("\tPixelFormat set to ") + pixelformat_pfnc_);
 
     } catch (GenICam::GenericException& e) {
-      // TODO
-      // an rcl expectation might be expected
       auto x = std::string("pixelformat is not supported by this camera");
       x.append(e.what());
       throw std::invalid_argument(x);
@@ -592,7 +628,7 @@ int ArenaCameraNode::get_video_name_(std::string& folder_path)
 }
 
 void ArenaCameraNode::start_recording_()
-{  // ADD if only recording is not started already
+{  // Use only if you have very powerful cpu and fast drive.
   if (!is_recording_) {
     video_params_ = Save::VideoParams(width_, height_, FRAMES_PER_SECOND);
     is_recording_ = true;
