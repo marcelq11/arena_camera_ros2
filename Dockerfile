@@ -16,7 +16,7 @@ RUN apt-get update \
         numpy==1.26.4 \
         paddlepaddle==3.0.0b2 \
         paddleocr==2.9.1 \
-        openvino==2024.1.0
+        openvino==2024.1.0 \
     && rm -rf /var/lib/apt/lists/*
 
 # ARGS might want to change ---------------------------------------------------
