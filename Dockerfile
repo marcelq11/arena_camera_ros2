@@ -82,4 +82,4 @@ ENTRYPOINT ["/bin/bash"]
 # If you want the container to source your workspace before bash starts
 # you can modify the entrypoint script to source the workspace
 
-WORKDIR /arena_camera_ros2/ros2_ws
+WORKDIR /arena_camera_ros2
