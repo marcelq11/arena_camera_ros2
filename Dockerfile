@@ -6,7 +6,17 @@
 FROM osrf/ros:humble-desktop
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install -y python3-pip \
+    && apt-get install -y \
+        xvfb \
+        python3-pip \
+        python3-colcon-common-extensions \
+        git \
+    && pip install \
+        ultralytics==8.3.27 \
+        numpy==1.26.4 \
+        paddlepaddle==3.0.0b2 \
+        paddleocr==2.9.1 \
+        openvino==2024.1.0
     && rm -rf /var/lib/apt/lists/*
 
 # ARGS might want to change ---------------------------------------------------
@@ -50,6 +60,12 @@ ADD ${arena_api_root_on_host}/*.whl ${arena_api_parent}/
 RUN for whl_package in `ls ${arena_api_parent}/*.whl`; do pip3 install $whl_package; done
 
 # setup workspace -------------------------------------------------------------
+ENV BASE_DIR=/arena_camera_ros2
+ENV DEST_DIR=/arena_camera_ros2/ros2_ws/src/sign_recognition_node/sign_recognition_node/Distance_Sign_Recognition
+ENV MODELS_PATH="$DEST_DIR/Models"
+
+# Set PYTHONPATH in the container
+ENV PYTHONPATH="$DEST_DIR:$DEST_DIR/image_processing:$DEST_DIR/utils"
 
 # setup entrypoint
 # entry point script:
